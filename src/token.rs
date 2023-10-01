@@ -47,6 +47,22 @@ pub enum TokenKind {
     Return,
 }
 
+impl TokenKind {
+    /// Matches keyword literals
+    pub fn lookup_identifier(identifier: &str) -> TokenKind {
+        match identifier {
+            "fn" => TokenKind::Function,
+            "let" => TokenKind::Let,
+            "true" => TokenKind::True,
+            "false" => TokenKind::False,
+            "if" => TokenKind::If,
+            "else" => TokenKind::Else,
+            "return" => TokenKind::Return,
+            _ => TokenKind::Identifier,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Source {
     filename: String,
