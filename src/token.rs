@@ -1,7 +1,8 @@
 #[derive(Debug, Eq, PartialEq)]
-pub struct Token {
+pub struct Token<'a> {
     pub kind: TokenKind,
-    pub literal: String,
+    pub literal: &'a str,
+    // TODO: add source location for more accurate debugging info
     // source: Source,
 }
 

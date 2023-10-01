@@ -1,15 +1,15 @@
 use crate::token::{Token, TokenKind};
 
 #[derive(Debug)]
-pub struct Lexer {
-    input: String,
+pub struct Lexer<'a> {
+    input: &'a str,
     curr: usize, // current position in input (points to current char)
     next: usize, // next position in input (after current char)
     ch: char,    // current char under examination
 }
 
-impl Lexer {
-    pub fn new(input: String) -> Self {
+impl<'a> Lexer<'a> {
+    pub fn new(input: &'a str) -> Self {
         let mut lexer = Self {
             input,
             curr: 0,
@@ -38,43 +38,43 @@ impl Lexer {
         let token = match self.ch {
             '=' => Token {
                 kind: TokenKind::Assign,
-                literal: "=".to_string(),
+                literal: "=",
             },
             '+' => Token {
                 kind: TokenKind::Plus,
-                literal: "+".to_string(),
+                literal: "+",
             },
             '(' => Token {
                 kind: TokenKind::LeftParen,
-                literal: "(".to_string(),
+                literal: "(",
             },
             ')' => Token {
                 kind: TokenKind::RightParen,
-                literal: ")".to_string(),
+                literal: ")",
             },
             '{' => Token {
                 kind: TokenKind::LeftBrace,
-                literal: "{".to_string(),
+                literal: "{",
             },
             '}' => Token {
                 kind: TokenKind::RightBrace,
-                literal: "}".to_string(),
+                literal: "}",
             },
             ';' => Token {
                 kind: TokenKind::Semicolon,
-                literal: ";".to_string(),
+                literal: ";",
             },
             ',' => Token {
                 kind: TokenKind::Comma,
-                literal: ",".to_string(),
+                literal: ",",
             },
             '\0' => Token {
                 kind: TokenKind::Eof,
-                literal: "".to_string(),
+                literal: "",
             },
             _ => Token {
                 kind: TokenKind::Illegal,
-                literal: "".to_string(),
+                literal: "",
             },
         };
 
@@ -105,7 +105,7 @@ mod tests {
             (TokenKind::Eof, ""),
         ];
 
-        let mut lexer = Lexer::new(input.to_string());
+        let mut lexer = Lexer::new(input);
 
         for (i, (expected_token, expected_literal)) in tests.iter().enumerate() {
             let tok = lexer.next_token();
