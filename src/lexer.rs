@@ -22,21 +22,25 @@ impl<'a> Lexer<'a> {
         lexer
     }
 
-    /// Give the next character and advance position in the input string.
-    pub fn read_char(&mut self) {
-        self.ch = if self.next >= self.input.chars().count() {
+    /// Give the next character.
+    pub fn peek_char(&mut self) -> char {
+        if self.next >= self.input.chars().count() {
             // reached EOF
             '\0'
         } else {
             self.input.chars().nth(self.next).unwrap_or('\0')
-        };
+        }
+    }
 
+    /// Retrieve the next character and advance position in the input string.
+    pub fn read_char(&mut self) {
+        self.ch = self.peek_char();
         self.curr = self.next;
         self.next += 1;
     }
 
     pub fn skip_whitespace(&mut self) {
-        while self.ch == ' ' || self.ch == '\t' || self.ch == '\n' || self.ch == '\r' {
+        while self.ch.is_whitespace() {
             self.read_char();
         }
     }
@@ -44,7 +48,7 @@ impl<'a> Lexer<'a> {
     pub fn read_identifier(&mut self) -> &str {
         let start = self.curr;
 
-        while Self::is_letter(self.ch) {
+        while self.ch.is_alphanumeric() {
             self.read_char();
         }
 
@@ -54,61 +58,66 @@ impl<'a> Lexer<'a> {
     pub fn read_number(&mut self) -> &str {
         let start = self.curr;
 
-        while Self::is_digit(self.ch) {
+        while self.ch.is_digit(10) {
             self.read_char();
         }
 
         &self.input[start..self.curr]
     }
 
-    /// Consume the current character and go ahead.
+    /// Retrieve the current token and advance position in the input string.
     pub fn next_token(&mut self) -> Token {
         self.skip_whitespace();
 
         let token = match self.ch {
             '=' => Token {
                 kind: TokenKind::Assign,
-                literal: "=",
+                literal: "=".to_string(),
             },
             '+' => Token {
                 kind: TokenKind::Plus,
-                literal: "+",
+                literal: "+".to_string(),
             },
             '(' => Token {
                 kind: TokenKind::LeftParen,
-                literal: "(",
+                literal: "(".to_string(),
             },
             ')' => Token {
                 kind: TokenKind::RightParen,
-                literal: ")",
+                literal: ")".to_string(),
             },
             '{' => Token {
                 kind: TokenKind::LeftBrace,
-                literal: "{",
+                literal: "{".to_string(),
             },
             '}' => Token {
                 kind: TokenKind::RightBrace,
-                literal: "}",
+                literal: "}".to_string(),
             },
             ';' => Token {
                 kind: TokenKind::Semicolon,
-                literal: ";",
+                literal: ";".to_string(),
             },
             ',' => Token {
                 kind: TokenKind::Comma,
-                literal: ",",
+                literal: ",".to_string(),
             },
             '\0' => Token {
                 kind: TokenKind::Eof,
-                literal: "",
+                literal: "".to_string(),
             },
             _ => {
-                if Self::is_letter(self.ch) {
+                if self.ch.is_alphabetic() {
                     let literal = self.read_identifier();
                     let kind = TokenKind::lookup_identifier(&literal);
-                    return Token { kind, literal };
-                } else if Self::is_digit(self.ch) {
-                    let literal = self.read_number();
+
+                    return Token {
+                        kind,
+                        literal: literal.to_string(),
+                    };
+                } else if self.ch.is_digit(10) {
+                    let literal = self.read_number().to_string();
+
                     return Token {
                         kind: TokenKind::Int,
                         literal,
@@ -116,7 +125,7 @@ impl<'a> Lexer<'a> {
                 } else {
                     Token {
                         kind: TokenKind::Illegal,
-                        literal: "", // TODO: cast self.ch here to &str
+                        literal: self.ch.to_string(),
                     }
                 }
             }
@@ -125,14 +134,6 @@ impl<'a> Lexer<'a> {
         self.read_char();
 
         token
-    }
-
-    fn is_letter(ch: char) -> bool {
-        (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_'
-    }
-
-    fn is_digit(ch: char) -> bool {
-        ch >= '0' && ch <= '9'
     }
 }
 

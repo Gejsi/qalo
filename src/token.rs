@@ -1,7 +1,7 @@
 #[derive(Debug, Eq, PartialEq)]
-pub struct Token<'a> {
+pub struct Token {
     pub kind: TokenKind,
-    pub literal: &'a str,
+    pub literal: String,
     // TODO: add source location for more accurate debugging info
     // source: Source,
 }
@@ -48,7 +48,7 @@ pub enum TokenKind {
 }
 
 impl TokenKind {
-    /// Matches keyword literals
+    /// Matches keywords.
     pub fn lookup_identifier(identifier: &str) -> TokenKind {
         match identifier {
             "fn" => TokenKind::Function,
