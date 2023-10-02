@@ -26,6 +26,8 @@ pub enum TokenKind {
 
     LessThan,
     GreaterThan,
+    LessThanEqual,
+    GreaterThanEqual,
 
     Comma,
     Semicolon,
@@ -63,7 +65,7 @@ impl TokenKind {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Source {
     filename: String,
     pos: (u32, u32),

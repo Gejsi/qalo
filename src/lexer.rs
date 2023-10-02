@@ -17,8 +17,8 @@ impl<'a> Lexer<'a> {
             ch: '\0',
         };
 
-        // initial read to 'start' the lexer
-        lexer.read_char();
+        lexer.eat_char();
+
         lexer
     }
 
@@ -33,7 +33,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Retrieve the next character and advance position in the input string.
-    pub fn read_char(&mut self) {
+    pub fn eat_char(&mut self) {
         self.ch = self.peek_char();
         self.curr = self.next;
         self.next += 1;
@@ -41,25 +41,49 @@ impl<'a> Lexer<'a> {
 
     pub fn skip_whitespace(&mut self) {
         while self.ch.is_whitespace() {
-            self.read_char();
+            self.eat_char();
         }
     }
 
-    pub fn read_identifier(&mut self) -> &str {
+    pub fn eat_identifier(&mut self) -> &str {
         let start = self.curr;
 
         while self.ch.is_alphanumeric() {
-            self.read_char();
+            self.eat_char();
         }
 
         &self.input[start..self.curr]
     }
 
-    pub fn read_number(&mut self) -> &str {
+    pub fn eat_number(&mut self) -> &str {
         let start = self.curr;
 
         while self.ch.is_digit(10) {
-            self.read_char();
+            self.eat_char();
+        }
+
+        &self.input[start..self.curr]
+    }
+
+    pub fn eat_string(&mut self) -> &str {
+        let start = self.curr + 1;
+
+        loop {
+            self.eat_char();
+            // println!("{}", &self.input[start..self.curr]);
+
+            if self.ch == '"' || self.ch == '\0' {
+                break;
+            } else if self.ch == '\\' {
+                // TODO: fix escape characters.
+
+                match self.peek_char() {
+                    'n' | 't' | 'r' | '\\' => self.eat_char(),
+                    _ => todo!(),
+                }
+
+                // println!("{}", self.peek_char());
+            }
         }
 
         &self.input[start..self.curr]
@@ -70,14 +94,78 @@ impl<'a> Lexer<'a> {
         self.skip_whitespace();
 
         let token = match self.ch {
-            '=' => Token {
-                kind: TokenKind::Assign,
-                literal: "=".to_string(),
-            },
+            '=' => {
+                if self.peek_char() == '=' {
+                    self.eat_char();
+                    Token {
+                        kind: TokenKind::Equal,
+                        literal: "==".to_string(),
+                    }
+                } else {
+                    Token {
+                        kind: TokenKind::Assign,
+                        literal: "=".to_string(),
+                    }
+                }
+            }
+            '!' => {
+                if self.peek_char() == '=' {
+                    self.eat_char();
+                    Token {
+                        kind: TokenKind::NotEqual,
+                        literal: "!=".to_string(),
+                    }
+                } else {
+                    Token {
+                        kind: TokenKind::Bang,
+                        literal: "!".to_string(),
+                    }
+                }
+            }
             '+' => Token {
                 kind: TokenKind::Plus,
                 literal: "+".to_string(),
             },
+            '-' => Token {
+                kind: TokenKind::Minus,
+                literal: "-".to_string(),
+            },
+            '/' => Token {
+                kind: TokenKind::Slash,
+                literal: "/".to_string(),
+            },
+            '*' => Token {
+                kind: TokenKind::Asterisk,
+                literal: "*".to_string(),
+            },
+            '<' => {
+                if self.peek_char() == '=' {
+                    self.eat_char();
+                    Token {
+                        kind: TokenKind::LessThanEqual,
+                        literal: "<=".to_string(),
+                    }
+                } else {
+                    Token {
+                        kind: TokenKind::LessThan,
+                        literal: "<".to_string(),
+                    }
+                }
+            }
+            '>' => {
+                if self.peek_char() == '=' {
+                    self.eat_char();
+                    Token {
+                        kind: TokenKind::GreaterThanEqual,
+                        literal: ">=".to_string(),
+                    }
+                } else {
+                    Token {
+                        kind: TokenKind::GreaterThan,
+                        literal: ">".to_string(),
+                    }
+                }
+            }
             '(' => Token {
                 kind: TokenKind::LeftParen,
                 literal: "(".to_string(),
@@ -94,6 +182,14 @@ impl<'a> Lexer<'a> {
                 kind: TokenKind::RightBrace,
                 literal: "}".to_string(),
             },
+            '[' => Token {
+                kind: TokenKind::LeftBracket,
+                literal: "[".to_string(),
+            },
+            ']' => Token {
+                kind: TokenKind::RightBracket,
+                literal: "]".to_string(),
+            },
             ';' => Token {
                 kind: TokenKind::Semicolon,
                 literal: ";".to_string(),
@@ -102,13 +198,21 @@ impl<'a> Lexer<'a> {
                 kind: TokenKind::Comma,
                 literal: ",".to_string(),
             },
+            '"' => {
+                let literal = self.eat_string().to_string();
+
+                Token {
+                    kind: TokenKind::String,
+                    literal,
+                }
+            }
             '\0' => Token {
                 kind: TokenKind::Eof,
                 literal: "".to_string(),
             },
             _ => {
                 if self.ch.is_alphabetic() {
-                    let literal = self.read_identifier();
+                    let literal = self.eat_identifier();
                     let kind = TokenKind::lookup_identifier(&literal);
 
                     return Token {
@@ -116,7 +220,7 @@ impl<'a> Lexer<'a> {
                         literal: literal.to_string(),
                     };
                 } else if self.ch.is_digit(10) {
-                    let literal = self.read_number().to_string();
+                    let literal = self.eat_number().to_string();
 
                     return Token {
                         kind: TokenKind::Int,
@@ -131,7 +235,7 @@ impl<'a> Lexer<'a> {
             }
         };
 
-        self.read_char();
+        self.eat_char();
 
         token
     }
@@ -178,7 +282,7 @@ mod tests {
     }
 
     #[test]
-    fn next_token_advanced() {
+    fn next_token2() {
         let input = r#"
             let five = 5;
             let ten = 10;
