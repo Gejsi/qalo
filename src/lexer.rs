@@ -8,13 +8,15 @@ pub struct Lexer<'a> {
     ch: char,    // current char under examination
 }
 
+const EOF_CHAR: char = '\0';
+
 impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
         let mut lexer = Self {
             input,
             curr: 0,
             next: 0,
-            ch: '\0',
+            ch: EOF_CHAR,
         };
 
         lexer.eat_char();
@@ -26,9 +28,9 @@ impl<'a> Lexer<'a> {
     pub fn peek_char(&mut self) -> char {
         if self.next >= self.input.chars().count() {
             // reached EOF
-            '\0'
+            EOF_CHAR
         } else {
-            self.input.chars().nth(self.next).unwrap_or('\0')
+            self.input.chars().nth(self.next).unwrap_or(EOF_CHAR)
         }
     }
 
@@ -48,13 +50,15 @@ impl<'a> Lexer<'a> {
     pub fn eat_identifier(&mut self) -> &str {
         let start = self.curr;
 
-        while self.ch.is_alphanumeric() {
+        while self.ch.is_alphanumeric() || self.ch == '_' {
             self.eat_char();
         }
 
         &self.input[start..self.curr]
     }
 
+    // TODO: add support for different types of numbers,
+    // only ints are supported currently.
     pub fn eat_number(&mut self) -> &str {
         let start = self.curr;
 
@@ -70,19 +74,10 @@ impl<'a> Lexer<'a> {
 
         loop {
             self.eat_char();
-            // println!("{}", &self.input[start..self.curr]);
 
-            if self.ch == '"' || self.ch == '\0' {
+            // TODO: add support for escape characters
+            if self.ch == '"' || self.ch == EOF_CHAR {
                 break;
-            } else if self.ch == '\\' {
-                // TODO: fix escape characters.
-
-                match self.peek_char() {
-                    'n' | 't' | 'r' | '\\' => self.eat_char(),
-                    _ => todo!(),
-                }
-
-                // println!("{}", self.peek_char());
             }
         }
 
@@ -122,22 +117,6 @@ impl<'a> Lexer<'a> {
                     }
                 }
             }
-            '+' => Token {
-                kind: TokenKind::Plus,
-                literal: "+".to_string(),
-            },
-            '-' => Token {
-                kind: TokenKind::Minus,
-                literal: "-".to_string(),
-            },
-            '/' => Token {
-                kind: TokenKind::Slash,
-                literal: "/".to_string(),
-            },
-            '*' => Token {
-                kind: TokenKind::Asterisk,
-                literal: "*".to_string(),
-            },
             '<' => {
                 if self.peek_char() == '=' {
                     self.eat_char();
@@ -166,6 +145,22 @@ impl<'a> Lexer<'a> {
                     }
                 }
             }
+            '+' => Token {
+                kind: TokenKind::Plus,
+                literal: "+".to_string(),
+            },
+            '-' => Token {
+                kind: TokenKind::Minus,
+                literal: "-".to_string(),
+            },
+            '/' => Token {
+                kind: TokenKind::Slash,
+                literal: "/".to_string(),
+            },
+            '*' => Token {
+                kind: TokenKind::Asterisk,
+                literal: "*".to_string(),
+            },
             '(' => Token {
                 kind: TokenKind::LeftParen,
                 literal: "(".to_string(),
@@ -190,6 +185,10 @@ impl<'a> Lexer<'a> {
                 kind: TokenKind::RightBracket,
                 literal: "]".to_string(),
             },
+            ':' => Token {
+                kind: TokenKind::Colon,
+                literal: ":".to_string(),
+            },
             ';' => Token {
                 kind: TokenKind::Semicolon,
                 literal: ";".to_string(),
@@ -206,12 +205,12 @@ impl<'a> Lexer<'a> {
                     literal,
                 }
             }
-            '\0' => Token {
+            EOF_CHAR => Token {
                 kind: TokenKind::Eof,
                 literal: "".to_string(),
             },
             _ => {
-                if self.ch.is_alphabetic() {
+                if self.ch.is_alphabetic() || self.ch == '_' {
                     let literal = self.eat_identifier();
                     let kind = TokenKind::lookup_identifier(&literal);
 
@@ -239,6 +238,26 @@ impl<'a> Lexer<'a> {
 
         token
     }
+
+    pub fn tokenize(&mut self) -> Vec<Token> {
+        let mut tokens = Vec::new();
+
+        loop {
+            let token = self.next_token();
+            if token.kind == TokenKind::Eof {
+                break;
+            }
+
+            tokens.push(token);
+        }
+
+        tokens.push(Token {
+            kind: TokenKind::Eof,
+            literal: "".to_string(),
+        });
+
+        tokens
+    }
 }
 
 #[cfg(test)]
@@ -262,23 +281,7 @@ mod tests {
             (TokenKind::Eof, ""),
         ];
 
-        let mut lexer = Lexer::new(input);
-
-        for (i, (expected_token, expected_literal)) in tests.iter().enumerate() {
-            let tok = lexer.next_token();
-
-            assert_eq!(
-                &tok.kind, expected_token,
-                "Test {:#?} - wrong 'kind'. Expected={:#?}, Got={:#?}",
-                i, expected_token, tok.kind
-            );
-
-            assert_eq!(
-                &tok.literal, expected_literal,
-                "Test {} - wrong 'literal'. Expected={}, Got={}",
-                i, expected_literal, tok.literal
-            );
-        }
+        test_tokenization_iter(input, tests)
     }
 
     #[test]
@@ -332,6 +335,38 @@ mod tests {
             (TokenKind::Eof, ""),
         ];
 
+        test_tokenization_iter(input, tests)
+    }
+
+    #[test]
+    fn next_token3() {
+        let input = r##"
+            "foo bar";
+            [1, 2];
+            {"foo": "bar"}
+        "##;
+
+        let tests = vec![
+            (TokenKind::String, "foo bar"),
+            (TokenKind::Semicolon, ";"),
+            (TokenKind::LeftBracket, "["),
+            (TokenKind::Int, "1"),
+            (TokenKind::Comma, ","),
+            (TokenKind::Int, "2"),
+            (TokenKind::RightBracket, "]"),
+            (TokenKind::Semicolon, ";"),
+            (TokenKind::LeftBrace, "{"),
+            (TokenKind::String, "foo"),
+            (TokenKind::Colon, ":"),
+            (TokenKind::String, "bar"),
+            (TokenKind::RightBrace, "}"),
+            (TokenKind::Eof, ""),
+        ];
+
+        test_tokenization_iter(input, tests)
+    }
+
+    fn test_tokenization_iter(input: &str, tests: Vec<(TokenKind, &str)>) {
         let mut lexer = Lexer::new(input);
 
         for (i, (expected_token, expected_literal)) in tests.iter().enumerate() {
