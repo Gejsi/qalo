@@ -3,9 +3,12 @@ use crate::token::{Token, TokenKind};
 #[derive(Debug)]
 pub struct Lexer<'a> {
     input: &'a str,
-    curr: usize, // current position in input (points to current char)
-    next: usize, // next position in input (after current char)
-    ch: char,    // current char under examination
+    /// Current position in input (points to current char)
+    cur: usize,
+    /// Next position in input (after current char)
+    next: usize,
+    /// Current char under examination
+    ch: char,
 }
 
 const EOF_CHAR: char = '\0';
@@ -14,7 +17,7 @@ impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
         let mut lexer = Self {
             input,
-            curr: 0,
+            cur: 0,
             next: 0,
             ch: EOF_CHAR,
         };
@@ -37,7 +40,7 @@ impl<'a> Lexer<'a> {
     /// Retrieve the next character and advance position in the input string.
     pub fn eat_char(&mut self) {
         self.ch = self.peek_char();
-        self.curr = self.next;
+        self.cur = self.next;
         self.next += 1;
     }
 
@@ -48,29 +51,29 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn eat_identifier(&mut self) -> &str {
-        let start = self.curr;
+        let start = self.cur;
 
         while self.ch.is_alphanumeric() || self.ch == '_' {
             self.eat_char();
         }
 
-        &self.input[start..self.curr]
+        &self.input[start..self.cur]
     }
 
     // TODO: add support for different types of numbers,
     // only ints are supported currently.
     pub fn eat_number(&mut self) -> &str {
-        let start = self.curr;
+        let start = self.cur;
 
         while self.ch.is_digit(10) {
             self.eat_char();
         }
 
-        &self.input[start..self.curr]
+        &self.input[start..self.cur]
     }
 
     pub fn eat_string(&mut self) -> &str {
-        let start = self.curr + 1;
+        let start = self.cur + 1;
 
         loop {
             self.eat_char();
@@ -81,7 +84,7 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        &self.input[start..self.curr]
+        &self.input[start..self.cur]
     }
 
     /// Retrieve the current token and advance position in the input string.
@@ -178,11 +181,11 @@ impl<'a> Lexer<'a> {
                 literal: "}".to_string(),
             },
             '[' => Token {
-                kind: TokenKind::LeftBracket,
+                kind: TokenKind::LeftSquare,
                 literal: "[".to_string(),
             },
             ']' => Token {
-                kind: TokenKind::RightBracket,
+                kind: TokenKind::RightSquare,
                 literal: "]".to_string(),
             },
             ':' => Token {
@@ -244,17 +247,14 @@ impl<'a> Lexer<'a> {
 
         loop {
             let token = self.next_token();
+
             if token.kind == TokenKind::Eof {
+                tokens.push(token);
                 break;
             }
 
             tokens.push(token);
         }
-
-        tokens.push(Token {
-            kind: TokenKind::Eof,
-            literal: "".to_string(),
-        });
 
         tokens
     }
@@ -264,6 +264,26 @@ impl<'a> Lexer<'a> {
 mod tests {
     use super::*;
     use crate::token::*;
+
+    fn test_tokenization_iter(input: &str, tests: Vec<(TokenKind, &str)>) {
+        let mut lexer = Lexer::new(input);
+
+        for (i, (expected_token, expected_literal)) in tests.iter().enumerate() {
+            let tok = lexer.next_token();
+
+            assert_eq!(
+                &tok.kind, expected_token,
+                "Test {:#?} - wrong 'kind'. Expected={:#?}, Got={:#?}",
+                i, expected_token, tok.kind
+            );
+
+            assert_eq!(
+                &tok.literal, expected_literal,
+                "Test {} - wrong 'literal'. Expected={}, Got={}",
+                i, expected_literal, tok.literal
+            );
+        }
+    }
 
     #[test]
     fn next_token() {
@@ -349,11 +369,11 @@ mod tests {
         let tests = vec![
             (TokenKind::String, "foo bar"),
             (TokenKind::Semicolon, ";"),
-            (TokenKind::LeftBracket, "["),
+            (TokenKind::LeftSquare, "["),
             (TokenKind::Int, "1"),
             (TokenKind::Comma, ","),
             (TokenKind::Int, "2"),
-            (TokenKind::RightBracket, "]"),
+            (TokenKind::RightSquare, "]"),
             (TokenKind::Semicolon, ";"),
             (TokenKind::LeftBrace, "{"),
             (TokenKind::String, "foo"),
@@ -364,25 +384,5 @@ mod tests {
         ];
 
         test_tokenization_iter(input, tests)
-    }
-
-    fn test_tokenization_iter(input: &str, tests: Vec<(TokenKind, &str)>) {
-        let mut lexer = Lexer::new(input);
-
-        for (i, (expected_token, expected_literal)) in tests.iter().enumerate() {
-            let tok = lexer.next_token();
-
-            assert_eq!(
-                &tok.kind, expected_token,
-                "Test {:#?} - wrong 'kind'. Expected={:#?}, Got={:#?}",
-                i, expected_token, tok.kind
-            );
-
-            assert_eq!(
-                &tok.literal, expected_literal,
-                "Test {} - wrong 'literal'. Expected={}, Got={}",
-                i, expected_literal, tok.literal
-            );
-        }
     }
 }

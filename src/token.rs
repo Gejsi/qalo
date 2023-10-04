@@ -6,7 +6,7 @@ pub struct Token {
     // source: Source,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum TokenKind {
     Illegal,
     Eof,
@@ -37,8 +37,8 @@ pub enum TokenKind {
     RightParen,
     LeftBrace,
     RightBrace,
-    LeftBracket,
-    RightBracket,
+    LeftSquare,
+    RightSquare,
 
     Function,
     Let,
@@ -65,8 +65,8 @@ impl TokenKind {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct Source {
-    filename: String,
-    pos: (u32, u32),
-}
+// #[derive(Debug, PartialEq, Eq)]
+// pub struct Source {
+//     filename: String,
+//     pos: (u32, u32),
+// }

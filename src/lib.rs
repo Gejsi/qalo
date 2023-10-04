@@ -1,4 +1,5 @@
 pub mod lexer;
+pub mod parser;
 pub mod token;
 
 // To run all tests with auto-reload:
