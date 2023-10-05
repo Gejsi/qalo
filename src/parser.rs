@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{num::ParseIntError, rc::Rc};
 
 use thiserror::Error;
 
@@ -51,6 +51,8 @@ pub enum ParserError {
     UnexpectedEndOfInput, // Describes an error when the input ends
     #[error("Semantic error: {0}")]
     SemanticError(String),
+    #[error("Failed to convert number to a 32 bit integer: {0}")]
+    IntConversionError(#[from] ParseIntError),
     #[error("Unknown parsing error")]
     Unknown,
 }
@@ -97,8 +99,8 @@ impl<'a> Parser<'a> {
         self.cur = std::mem::replace(&mut self.next, self.lexer.next_token().into());
     }
 
-    pub fn expect_token(&mut self, token_kind: &TokenKind) -> Result<Rc<Token>, ParserError> {
-        if &self.next.kind != token_kind {
+    pub fn expect_token(&mut self, token_kind: TokenKind) -> Result<Rc<Token>, ParserError> {
+        if self.next.kind != token_kind {
             return Err(ParserError::UnexpectedToken(self.next.clone()));
         }
 
@@ -115,13 +117,51 @@ impl<'a> Parser<'a> {
             self.cur.kind.clone()
         };
 
-        let name = self.expect_token(&TokenKind::Identifier)?;
+        let name = self.expect_token(TokenKind::Identifier)?;
+
+        self.expect_token(TokenKind::Assign)?;
+
+        let expr = self.parse_expression()?;
+
+        self.expect_token(TokenKind::Semicolon)?;
 
         Ok(Statement::VarStatement {
             kind,
             name: Identifier(name.literal.clone()),
-            value: Expression::IntegerLiteral(1),
+            value: expr,
         })
+    }
+
+    fn parse_expression(&mut self) -> Result<Expression, ParserError> {
+        self.eat_token();
+
+        let expr = match self.cur.kind {
+            TokenKind::Int => match self.next.kind {
+                TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Asterisk => {
+                    let left =
+                        Box::new(Expression::IntegerLiteral(self.cur.literal.parse::<i32>()?));
+
+                    self.eat_token();
+
+                    let operator = self.cur.literal.clone();
+
+                    let right = Box::new(self.parse_expression()?);
+
+                    Expression::InfixExpression {
+                        left,
+                        operator,
+                        right,
+                    }
+                }
+                TokenKind::Semicolon => {
+                    Expression::IntegerLiteral(self.cur.literal.parse::<i32>()?)
+                }
+                _ => todo!(),
+            },
+            _ => todo!(),
+        };
+
+        Ok(expr)
     }
 
     pub fn parse_program(&mut self) -> Result<Program, ParserError> {
