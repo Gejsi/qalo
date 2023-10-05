@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use thiserror::Error;
 
 use crate::{
@@ -6,12 +8,12 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct Program<'a>(pub Vec<Statement<'a>>);
+pub struct Program(pub Vec<Statement>);
 
 #[derive(Debug)]
-pub enum Statement<'a> {
+pub enum Statement {
     VarStatement {
-        kind: &'a TokenKind,
+        kind: TokenKind,
         name: Identifier,
         value: Expression,
     },
@@ -42,9 +44,9 @@ pub enum ParserError {
     #[error("Syntax error: {0}")]
     SyntaxError(String), // Describes a syntax error with an error message
     #[error("Unexpected token: {0:#?}")]
-    UnexpectedToken(Token), // Describes an unexpected token encountered during parsing
+    UnexpectedToken(Rc<Token>), // Describes an unexpected token encountered during parsing
     #[error("Operator received an invalid operand type: {0:#?}")]
-    InvalidOperandType(Token), // Describes an error when an operator receives an invalid operand type
+    InvalidOperandType(Rc<Token>), // Describes an error when an operator receives an invalid operand type
     #[error("Input ends unexpectedly")]
     UnexpectedEndOfInput, // Describes an error when the input ends
     #[error("Semantic error: {0}")]
@@ -56,8 +58,8 @@ pub enum ParserError {
 #[derive(Debug)]
 pub struct Parser<'a> {
     pub lexer: Lexer<'a>,
-    pub cur: Token,
-    pub next: Token,
+    pub cur: Rc<Token>,
+    pub next: Rc<Token>,
 }
 
 impl<'a> Parser<'a> {
@@ -66,14 +68,14 @@ impl<'a> Parser<'a> {
 
         let mut parser = Self {
             lexer,
-            cur: Token {
+            cur: Rc::new(Token {
                 kind: TokenKind::Eof,
                 literal: "".to_string(),
-            },
-            next: Token {
+            }),
+            next: Rc::new(Token {
                 kind: TokenKind::Eof,
                 literal: "".to_string(),
-            },
+            }),
         };
 
         // consume two tokens to set `cur` and `next` correctly
@@ -92,32 +94,32 @@ impl<'a> Parser<'a> {
             ```
             ... but respecting the borrow checker.
         */
-        self.cur = std::mem::replace(&mut self.next, self.lexer.next_token());
+        self.cur = std::mem::replace(&mut self.next, self.lexer.next_token().into());
     }
 
-    pub fn expect_token(&mut self, token_kind: &TokenKind) -> Result<(), ParserError> {
+    pub fn expect_token(&mut self, token_kind: &TokenKind) -> Result<Rc<Token>, ParserError> {
         if &self.next.kind != token_kind {
-            return Err(ParserError::UnexpectedToken(self.cur.clone()));
+            return Err(ParserError::UnexpectedToken(self.next.clone()));
         }
 
         self.eat_token();
-        Ok(())
+        Ok(self.cur.clone())
     }
 
     pub fn parse_var_statement(&mut self) -> Result<Statement, ParserError> {
-        // let kind = if self.cur.kind != TokenKind::Let {
-        //     return Err(ParserError::SyntaxError(
-        //         "Binding statements must start with `let`".to_string(),
-        //     ));
-        // } else {
-        //     &self.cur.kind
-        // };
+        let kind = if self.cur.kind != TokenKind::Let {
+            return Err(ParserError::SyntaxError(
+                "Binding statements must start with `let`".to_string(),
+            ));
+        } else {
+            self.cur.kind.clone()
+        };
 
-        // self.expect_token(&TokenKind::Identifier)?;
+        let name = self.expect_token(&TokenKind::Identifier)?;
 
         Ok(Statement::VarStatement {
-            kind: &TokenKind::Let,
-            name: Identifier("aa".to_string()),
+            kind,
+            name: Identifier(name.literal.clone()),
             value: Expression::IntegerLiteral(1),
         })
     }
