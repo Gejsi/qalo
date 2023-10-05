@@ -6,12 +6,12 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct Program(pub Vec<Statement>);
+pub struct Program<'a>(pub Vec<Statement<'a>>);
 
 #[derive(Debug)]
-pub enum Statement {
+pub enum Statement<'a> {
     VarStatement {
-        kind: TokenKind,
+        kind: &'a TokenKind,
         name: Identifier,
         value: Expression,
     },
@@ -38,13 +38,13 @@ pub enum Expression {
 }
 
 #[derive(Error, Debug)]
-pub enum ParserError<'a> {
+pub enum ParserError {
     #[error("Syntax error: {0}")]
     SyntaxError(String), // Describes a syntax error with an error message
     #[error("Unexpected token: {0:#?}")]
-    UnexpectedToken(&'a Token), // Describes an unexpected token encountered during parsing
+    UnexpectedToken(Token), // Describes an unexpected token encountered during parsing
     #[error("Operator received an invalid operand type: {0:#?}")]
-    InvalidOperandType(&'a Token), // Describes an error when an operator receives an invalid operand type
+    InvalidOperandType(Token), // Describes an error when an operator receives an invalid operand type
     #[error("Input ends unexpectedly")]
     UnexpectedEndOfInput, // Describes an error when the input ends
     #[error("Semantic error: {0}")]
@@ -61,7 +61,9 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(lexer: Lexer<'a>) -> Self {
+    pub fn new(input: &'a str) -> Self {
+        let lexer = Lexer::new(&input);
+
         let mut parser = Self {
             lexer,
             cur: Token {
@@ -74,7 +76,7 @@ impl<'a> Parser<'a> {
             },
         };
 
-        // consume two tokens
+        // consume two tokens to set `cur` and `next` correctly
         parser.eat_token();
         parser.eat_token();
 
@@ -95,7 +97,7 @@ impl<'a> Parser<'a> {
 
     pub fn expect_token(&mut self, token_kind: &TokenKind) -> Result<(), ParserError> {
         if &self.next.kind != token_kind {
-            return Err(ParserError::UnexpectedToken(&self.cur));
+            return Err(ParserError::UnexpectedToken(self.cur.clone()));
         }
 
         self.eat_token();
@@ -114,7 +116,7 @@ impl<'a> Parser<'a> {
         // self.expect_token(&TokenKind::Identifier)?;
 
         Ok(Statement::VarStatement {
-            kind: TokenKind::Let,
+            kind: &TokenKind::Let,
             name: Identifier("aa".to_string()),
             value: Expression::IntegerLiteral(1),
         })
