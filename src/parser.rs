@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    ast::{self, Expression, ParserError, Program, Statement},
+    ast::{Expression, ParserError, Program, Statement},
     lexer::Lexer,
     token::{Token, TokenKind},
 };
@@ -59,6 +59,7 @@ impl<'a> Parser<'a> {
 
     pub fn parse_var_statement(&mut self) -> Result<Statement, ParserError> {
         let kind = if self.cur.kind != TokenKind::Let {
+            println!("{:?}", self.cur);
             return Err(ParserError::SyntaxError(
                 "Binding statements must start with `let`".to_string(),
             ));
@@ -79,6 +80,13 @@ impl<'a> Parser<'a> {
             name: name.literal.clone(),
             value: expr,
         })
+    }
+
+    pub fn parse_return_statement(&mut self) -> Result<Statement, ParserError> {
+        let expr = self.parse_expression()?;
+        self.expect_token(TokenKind::Semicolon)?;
+
+        Ok(Statement::ReturnStatement(expr))
     }
 
     fn parse_expression(&mut self) -> Result<Expression, ParserError> {
@@ -136,9 +144,28 @@ mod tests {
     fn parse_var_statement() {
         let input = r#"
             let five = 5;
+            let taken = false;
+            let temp = taken;
         "#;
 
         let mut parser = Parser::new(&input);
+
         parser.parse_var_statement().unwrap();
+        parser.eat_token();
+
+        parser.parse_var_statement().unwrap();
+        parser.eat_token();
+
+        parser.parse_var_statement().unwrap();
+    }
+
+    #[test]
+    fn parse_return_statement() {
+        let input = r#"
+            return token;
+        "#;
+
+        let mut parser = Parser::new(&input);
+        parser.parse_return_statement().unwrap();
     }
 }

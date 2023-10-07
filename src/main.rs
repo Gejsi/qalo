@@ -6,12 +6,16 @@ use jerboa::parser::Parser;
 // cargo watch -w src -x run -c
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let taken = dude;
+        let five = 5;
+        return token;
     "#;
 
     let mut parser = Parser::new(&input);
-    let var = parser.parse_var_statement()?;
-    println!("{:#?}", var);
+    let res = parser.parse_var_statement()?;
+    println!("{:#?}", res);
+    parser.eat_token();
+    let res = parser.parse_return_statement()?;
+    println!("{:#?}", res);
 
     Ok(())
 }
