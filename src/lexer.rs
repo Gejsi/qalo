@@ -225,7 +225,7 @@ impl<'a> Lexer<'a> {
                     let literal = self.eat_number().to_string();
 
                     return Token {
-                        kind: TokenKind::Int,
+                        kind: TokenKind::Integer,
                         literal,
                     };
                 } else {
@@ -240,23 +240,6 @@ impl<'a> Lexer<'a> {
         self.eat_char();
 
         token
-    }
-
-    pub fn tokenize(&mut self) -> Vec<Token> {
-        let mut tokens = Vec::new();
-
-        loop {
-            let token = self.next_token();
-
-            if token.kind == TokenKind::Eof {
-                tokens.push(token);
-                break;
-            }
-
-            tokens.push(token);
-        }
-
-        tokens
     }
 }
 
@@ -319,12 +302,12 @@ mod tests {
             (TokenKind::Let, "let"),
             (TokenKind::Identifier, "five"),
             (TokenKind::Assign, "="),
-            (TokenKind::Int, "5"),
+            (TokenKind::Integer, "5"),
             (TokenKind::Semicolon, ";"),
             (TokenKind::Let, "let"),
             (TokenKind::Identifier, "ten"),
             (TokenKind::Assign, "="),
-            (TokenKind::Int, "10"),
+            (TokenKind::Integer, "10"),
             (TokenKind::Semicolon, ";"),
             (TokenKind::Let, "let"),
             (TokenKind::Identifier, "add"),
@@ -370,9 +353,9 @@ mod tests {
             (TokenKind::String, "foo bar"),
             (TokenKind::Semicolon, ";"),
             (TokenKind::LeftSquare, "["),
-            (TokenKind::Int, "1"),
+            (TokenKind::Integer, "1"),
             (TokenKind::Comma, ","),
-            (TokenKind::Int, "2"),
+            (TokenKind::Integer, "2"),
             (TokenKind::RightSquare, "]"),
             (TokenKind::Semicolon, ";"),
             (TokenKind::LeftBrace, "{"),

@@ -13,7 +13,7 @@ pub enum TokenKind {
     Eof,
 
     Identifier,
-    Int,
+    Integer,
     String,
 
     Assign,
