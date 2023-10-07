@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    ast::{Expression, Identifier, ParserError, Program, Statement},
+    ast::{self, Expression, ParserError, Program, Statement},
     lexer::Lexer,
     token::{Token, TokenKind},
 };
@@ -76,7 +76,7 @@ impl<'a> Parser<'a> {
 
         Ok(Statement::VarStatement {
             kind,
-            name: Identifier(name.literal.clone()),
+            name: name.literal.clone(),
             value: expr,
         })
     }
@@ -109,6 +109,12 @@ impl<'a> Parser<'a> {
                     return Err(ParserError::UnexpectedToken(self.next.clone()));
                 }
             },
+
+            TokenKind::True => Expression::BooleanLiteral(true),
+            TokenKind::False => Expression::BooleanLiteral(false),
+
+            TokenKind::Identifier => Expression::Identifier(self.cur.literal.clone()),
+
             _ => {
                 return Err(ParserError::UnexpectedToken(self.cur.clone()));
             }

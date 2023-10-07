@@ -11,7 +11,7 @@ pub struct Program(pub Vec<Statement>);
 pub enum Statement {
     VarStatement {
         kind: TokenKind,
-        name: Identifier,
+        name: String,
         value: Expression,
     },
 
@@ -22,11 +22,8 @@ pub enum Statement {
 }
 
 #[derive(Debug)]
-pub struct Identifier(pub String);
-
-#[derive(Debug)]
 pub enum Expression {
-    Identifier(Identifier),
+    Identifier(String),
     IntegerLiteral(i32),
     BooleanLiteral(bool),
     InfixExpression {

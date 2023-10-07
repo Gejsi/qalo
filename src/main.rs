@@ -6,7 +6,7 @@ use jerboa::parser::Parser;
 // cargo watch -w src -x run -c
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let five = 5;
+        let taken = dude;
     "#;
 
     let mut parser = Parser::new(&input);
