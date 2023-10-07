@@ -83,9 +83,15 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_return_statement(&mut self) -> Result<Statement, ParserError> {
+        if self.cur.kind != TokenKind::Return {
+            println!("{:?}", self.cur);
+            return Err(ParserError::SyntaxError(
+                "Return statements must start with `return`".to_string(),
+            ));
+        }
+
         let expr = self.parse_expression()?;
         self.expect_token(TokenKind::Semicolon)?;
-
         Ok(Statement::ReturnStatement(expr))
     }
 
@@ -99,7 +105,6 @@ impl<'a> Parser<'a> {
                         Box::new(Expression::IntegerLiteral(self.cur.literal.parse::<i32>()?));
 
                     self.eat_token();
-
                     let operator = self.cur.literal.clone();
 
                     let right = Box::new(self.parse_expression()?);
@@ -121,7 +126,23 @@ impl<'a> Parser<'a> {
             TokenKind::True => Expression::BooleanLiteral(true),
             TokenKind::False => Expression::BooleanLiteral(false),
 
-            TokenKind::Identifier => Expression::Identifier(self.cur.literal.clone()),
+            TokenKind::Identifier => match self.next.kind {
+                TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Asterisk => {
+                    let left = Box::new(Expression::Identifier(self.cur.literal.clone()));
+
+                    self.eat_token();
+                    let operator = self.cur.literal.clone();
+
+                    let right = Box::new(self.parse_expression()?);
+
+                    Expression::InfixExpression {
+                        left,
+                        operator,
+                        right,
+                    }
+                }
+                _ => Expression::Identifier(self.cur.literal.clone()),
+            },
 
             _ => {
                 return Err(ParserError::UnexpectedToken(self.cur.clone()));
@@ -146,17 +167,16 @@ mod tests {
             let five = 5;
             let taken = false;
             let temp = taken;
+            let seven = five + 2 * 1;
         "#;
 
+        let num_vars = 4;
         let mut parser = Parser::new(&input);
 
-        parser.parse_var_statement().unwrap();
-        parser.eat_token();
-
-        parser.parse_var_statement().unwrap();
-        parser.eat_token();
-
-        parser.parse_var_statement().unwrap();
+        (0..num_vars).for_each(|_| {
+            parser.parse_var_statement().unwrap();
+            parser.eat_token();
+        });
     }
 
     #[test]

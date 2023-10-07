@@ -16,9 +16,6 @@ pub enum Statement {
     },
 
     ReturnStatement(Expression),
-
-    /// e.g. `a + b;`
-    ExpressionStatement(Expression),
 }
 
 #[derive(Debug)]
