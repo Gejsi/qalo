@@ -57,9 +57,16 @@ impl<'a> Parser<'a> {
         Ok(self.cur.clone())
     }
 
+    pub fn parse_statement(&mut self) -> Result<Statement, ParserError> {
+        match self.cur.kind {
+            TokenKind::Let => self.parse_var_statement(),
+            TokenKind::Return => self.parse_return_statement(),
+            _ => todo!(),
+        }
+    }
+
     pub fn parse_var_statement(&mut self) -> Result<Statement, ParserError> {
         let kind = if self.cur.kind != TokenKind::Let {
-            println!("{:?}", self.cur);
             return Err(ParserError::SyntaxError(
                 "Binding statements must start with `let`".to_string(),
             ));
@@ -84,7 +91,6 @@ impl<'a> Parser<'a> {
 
     pub fn parse_return_statement(&mut self) -> Result<Statement, ParserError> {
         if self.cur.kind != TokenKind::Return {
-            println!("{:?}", self.cur);
             return Err(ParserError::SyntaxError(
                 "Return statements must start with `return`".to_string(),
             ));
@@ -105,7 +111,7 @@ impl<'a> Parser<'a> {
                         Box::new(Expression::IntegerLiteral(self.cur.literal.parse::<i32>()?));
 
                     self.eat_token();
-                    let operator = self.cur.literal.clone();
+                    let operator = self.cur.kind.clone();
 
                     let right = Box::new(self.parse_expression()?);
 
@@ -131,7 +137,7 @@ impl<'a> Parser<'a> {
                     let left = Box::new(Expression::Identifier(self.cur.literal.clone()));
 
                     self.eat_token();
-                    let operator = self.cur.literal.clone();
+                    let operator = self.cur.kind.clone();
 
                     let right = Box::new(self.parse_expression()?);
 
@@ -153,7 +159,14 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_program(&mut self) -> Result<Program, ParserError> {
-        Ok(Program(vec![]))
+        let mut statements: Vec<Statement> = vec![];
+
+        while self.cur.kind != TokenKind::Eof {
+            statements.push(self.parse_statement()?);
+            self.eat_token();
+        }
+
+        Ok(Program(statements))
     }
 }
 
@@ -170,7 +183,7 @@ mod tests {
             let seven = five + 2 * 1;
         "#;
 
-        let num_vars = 4;
+        let num_vars = input.lines().count() - 2;
         let mut parser = Parser::new(&input);
 
         (0..num_vars).for_each(|_| {
@@ -187,5 +200,18 @@ mod tests {
 
         let mut parser = Parser::new(&input);
         parser.parse_return_statement().unwrap();
+    }
+
+    #[test]
+    fn parse_program() {
+        let input = r#"
+            let a = 1;
+            let b = a + 1;
+
+            return a / b;
+        "#;
+
+        let mut parser = Parser::new(&input);
+        parser.parse_program().unwrap();
     }
 }

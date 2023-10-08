@@ -25,7 +25,7 @@ pub enum Expression {
     BooleanLiteral(bool),
     InfixExpression {
         left: Box<Expression>,
-        operator: String,
+        operator: TokenKind,
         right: Box<Expression>,
     },
 }
