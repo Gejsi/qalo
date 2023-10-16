@@ -13,6 +13,13 @@ pub struct Parser<'a> {
     pub next: Rc<Token>,
 }
 
+/// The resulting tuple represents the binding power
+/// of an operator. For example:
+/// a   +   b   *   c   *   d   +   e
+///. 1   2   3   4   3   4   1   2
+#[derive(Debug)]
+pub struct Precedence(u8, u8);
+
 impl<'a> Parser<'a> {
     pub fn new(input: &'a str) -> Self {
         let lexer = Lexer::new(&input);
@@ -41,7 +48,7 @@ impl<'a> Parser<'a> {
             This is like doing...
             ```
             self.cur = self.next;
-            self.next = self.lexer.next_token();
+            self.next = self.lexer.next_token().into();
             ```
             ... but respecting the borrow checker.
         */
@@ -55,6 +62,17 @@ impl<'a> Parser<'a> {
 
         self.eat_token();
         Ok(self.cur.clone())
+    }
+
+    pub fn parse_program(&mut self) -> Result<Program, ParserError> {
+        let mut statements: Vec<Statement> = vec![];
+
+        while self.cur.kind != TokenKind::Eof {
+            statements.push(self.parse_statement()?);
+            self.eat_token();
+        }
+
+        Ok(Program(statements))
     }
 
     pub fn parse_statement(&mut self) -> Result<Statement, ParserError> {
@@ -75,11 +93,8 @@ impl<'a> Parser<'a> {
         };
 
         let name = self.expect_token(TokenKind::Identifier)?;
-
         self.expect_token(TokenKind::Assign)?;
-
-        let expr = self.parse_expression()?;
-
+        let expr = self.parse_expression(0)?;
         self.expect_token(TokenKind::Semicolon)?;
 
         Ok(Statement::VarStatement {
@@ -96,77 +111,74 @@ impl<'a> Parser<'a> {
             ));
         }
 
-        let expr = self.parse_expression()?;
+        let expr = self.parse_expression(0)?;
         self.expect_token(TokenKind::Semicolon)?;
         Ok(Statement::ReturnStatement(expr))
     }
 
-    fn parse_expression(&mut self) -> Result<Expression, ParserError> {
+    fn infix_precedence(op: &TokenKind) -> Option<Precedence> {
+        match op {
+            TokenKind::Plus | TokenKind::Minus => Some(Precedence(1, 2)),
+            TokenKind::Asterisk | TokenKind::Slash => Some(Precedence(3, 4)),
+            _ => None,
+        }
+    }
+
+    fn parse_expression(&mut self, min_prec: u8) -> Result<Expression, ParserError> {
         self.eat_token();
-
-        let expr = match self.cur.kind {
-            TokenKind::Integer => match self.next.kind {
-                TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Asterisk => {
-                    let left =
-                        Box::new(Expression::IntegerLiteral(self.cur.literal.parse::<i32>()?));
-
-                    self.eat_token();
-                    let operator = self.cur.kind.clone();
-
-                    let right = Box::new(self.parse_expression()?);
-
-                    Expression::InfixExpression {
-                        left,
-                        operator,
-                        right,
-                    }
-                }
-                TokenKind::Semicolon => {
-                    Expression::IntegerLiteral(self.cur.literal.parse::<i32>()?)
-                }
-                _ => {
-                    return Err(ParserError::UnexpectedToken(self.next.clone()));
-                }
-            },
-
+        let mut expr = match self.cur.kind {
+            TokenKind::Integer => Expression::IntegerLiteral(self.cur.literal.parse::<i32>()?),
+            TokenKind::Identifier => Expression::Identifier(self.cur.literal.clone()),
             TokenKind::True => Expression::BooleanLiteral(true),
             TokenKind::False => Expression::BooleanLiteral(false),
-
-            TokenKind::Identifier => match self.next.kind {
-                TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Asterisk => {
-                    let left = Box::new(Expression::Identifier(self.cur.literal.clone()));
-
-                    self.eat_token();
-                    let operator = self.cur.kind.clone();
-
-                    let right = Box::new(self.parse_expression()?);
-
-                    Expression::InfixExpression {
-                        left,
-                        operator,
-                        right,
-                    }
-                }
-                _ => Expression::Identifier(self.cur.literal.clone()),
-            },
-
+            // TokenKind::LeftParen => {
+            //     self.eat_token();
+            //     let expr = self.parse_expression()?;
+            //     self.expect_token(TokenKind::RightParen)?;
+            //     Expression::ParenthesizedExpression(Box::new(expr))
+            // }
             _ => {
                 return Err(ParserError::UnexpectedToken(self.cur.clone()));
             }
         };
 
-        Ok(expr)
-    }
+        // Pratt parsing uses both a loop and recursion to
+        // handle grouping based on precedences.
+        loop {
+            // TODO: handle prefix parsing, similar to the `if` below
 
-    pub fn parse_program(&mut self) -> Result<Program, ParserError> {
-        let mut statements: Vec<Statement> = vec![];
+            // parse binary expressions based on infix operators precedences
+            if let Some(Precedence(left_prec, right_prec)) = Self::infix_precedence(&self.next.kind)
+            {
+                if left_prec < min_prec {
+                    break;
+                }
 
-        while self.cur.kind != TokenKind::Eof {
-            statements.push(self.parse_statement()?);
-            self.eat_token();
+                self.eat_token();
+                let operator = self.cur.kind.clone();
+
+                expr = match self.cur.kind {
+                    TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Asterisk => {
+                        let right = self.parse_expression(right_prec)?;
+
+                        Expression::BinaryExpression {
+                            left: Box::new(expr),
+                            operator,
+                            right: Box::new(right),
+                        }
+                    }
+                    _ => {
+                        return Err(ParserError::UnexpectedToken(self.cur.clone()));
+                    }
+                };
+
+                continue;
+            }
+
+            break;
         }
 
-        Ok(Program(statements))
+        Ok(expr)
     }
 }
 
@@ -207,7 +219,6 @@ mod tests {
         let input = r#"
             let a = 1;
             let b = a + 1;
-
             return a / b;
         "#;
 

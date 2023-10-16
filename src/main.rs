@@ -8,10 +8,7 @@ cargo watch -w src -x run -c
 */
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let a = 1;
-        let b = a + 1;
-
-        return a / b;
+        let foo = a + b * c;
     "#;
 
     let mut parser = Parser::new(&input);
