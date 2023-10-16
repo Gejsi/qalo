@@ -13,12 +13,15 @@ pub struct Parser<'a> {
     pub next: Rc<Token>,
 }
 
-/// The resulting tuple represents the binding power
-/// of an operator. For example:
+/// Represents the binding power of a token (e.g. operators).
+/// For example:
 /// a   +   b   *   c   *   d   +   e
 ///. 1   2   3   4   3   4   1   2
 #[derive(Debug)]
-pub struct Precedence(u8, u8);
+pub enum Precedence {
+    Infix(u8, u8),
+    Prefix(u8),
+}
 
 impl<'a> Parser<'a> {
     pub fn new(input: &'a str) -> Self {
@@ -118,8 +121,15 @@ impl<'a> Parser<'a> {
 
     fn infix_precedence(op: &TokenKind) -> Option<Precedence> {
         match op {
-            TokenKind::Plus | TokenKind::Minus => Some(Precedence(1, 2)),
-            TokenKind::Asterisk | TokenKind::Slash => Some(Precedence(3, 4)),
+            TokenKind::Plus | TokenKind::Minus => Some(Precedence::Infix(1, 2)),
+            TokenKind::Asterisk | TokenKind::Slash => Some(Precedence::Infix(3, 4)),
+            _ => None,
+        }
+    }
+
+    fn prefix_precedence(op: &TokenKind) -> Option<Precedence> {
+        match op {
+            TokenKind::Bang | TokenKind::Minus => Some(Precedence::Prefix(5)),
             _ => None,
         }
     }
@@ -131,24 +141,31 @@ impl<'a> Parser<'a> {
             TokenKind::Identifier => Expression::Identifier(self.cur.literal.clone()),
             TokenKind::True => Expression::BooleanLiteral(true),
             TokenKind::False => Expression::BooleanLiteral(false),
-            // TokenKind::LeftParen => {
-            //     self.eat_token();
-            //     let expr = self.parse_expression()?;
-            //     self.expect_token(TokenKind::RightParen)?;
-            //     Expression::ParenthesizedExpression(Box::new(expr))
-            // }
+            TokenKind::Bang | TokenKind::Minus => {
+                // parse unary expressions based on prefix token precedences
+                let operator = self.cur.kind.clone();
+
+                let Some(Precedence::Prefix(prec)) = Self::prefix_precedence(&self.cur.kind) else {
+                    return Err(ParserError::Unknown);
+                };
+
+                let right = self.parse_expression(prec)?;
+
+                Expression::UnaryExpression {
+                    operator,
+                    value: Box::new(right),
+                }
+            }
             _ => {
                 return Err(ParserError::UnexpectedToken(self.cur.clone()));
             }
         };
 
-        // Pratt parsing uses both a loop and recursion to
-        // handle grouping based on precedences.
+        // Pratt parsing uses both a loop and recursion to handle grouping based on precedences.
         loop {
-            // TODO: handle prefix parsing, similar to the `if` below
-
             // parse binary expressions based on infix operators precedences
-            if let Some(Precedence(left_prec, right_prec)) = Self::infix_precedence(&self.next.kind)
+            if let Some(Precedence::Infix(left_prec, right_prec)) =
+                Self::infix_precedence(&self.next.kind)
             {
                 if left_prec < min_prec {
                     break;

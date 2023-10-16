@@ -32,6 +32,11 @@ pub enum Expression {
         right: Box<Expression>,
     },
 
+    UnaryExpression {
+        operator: TokenKind,
+        value: Box<Expression>,
+    },
+
     ParenthesizedExpression(Box<Expression>),
 
     Empty,
