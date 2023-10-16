@@ -162,37 +162,31 @@ impl<'a> Parser<'a> {
         };
 
         // Pratt parsing uses both a loop and recursion to handle grouping based on precedences.
-        loop {
+        while let Some(Precedence::Infix(left_prec, right_prec)) =
+            Self::infix_precedence(&self.next.kind)
+        {
             // parse binary expressions based on infix operators precedences
-            if let Some(Precedence::Infix(left_prec, right_prec)) =
-                Self::infix_precedence(&self.next.kind)
-            {
-                if left_prec < min_prec {
-                    break;
-                }
-
-                self.eat_token();
-                let operator = self.cur.kind.clone();
-
-                expr = match self.cur.kind {
-                    TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Asterisk => {
-                        let right = self.parse_expression(right_prec)?;
-
-                        Expression::BinaryExpression {
-                            left: Box::new(expr),
-                            operator,
-                            right: Box::new(right),
-                        }
-                    }
-                    _ => {
-                        return Err(ParserError::UnexpectedToken(self.cur.clone()));
-                    }
-                };
-
-                continue;
+            if left_prec < min_prec {
+                break;
             }
 
-            break;
+            self.eat_token();
+            let operator = self.cur.kind.clone();
+
+            expr = match self.cur.kind {
+                TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Asterisk => {
+                    let right = self.parse_expression(right_prec)?;
+
+                    Expression::BinaryExpression {
+                        left: Box::new(expr),
+                        operator,
+                        right: Box::new(right),
+                    }
+                }
+                _ => {
+                    return Err(ParserError::UnexpectedToken(self.cur.clone()));
+                }
+            };
         }
 
         Ok(expr)
