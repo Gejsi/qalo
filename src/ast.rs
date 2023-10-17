@@ -16,6 +16,8 @@ pub enum Statement {
     },
 
     ReturnStatement(Expression),
+
+    ExpressionStatement(Expression),
 }
 
 #[derive(Debug)]
@@ -38,8 +40,6 @@ pub enum Expression {
     },
 
     ParenthesizedExpression(Box<Expression>),
-
-    Empty,
 }
 
 #[derive(Error, Debug)]

@@ -82,7 +82,7 @@ impl<'a> Parser<'a> {
         match self.cur.kind {
             TokenKind::Let => self.parse_var_statement(),
             TokenKind::Return => self.parse_return_statement(),
-            _ => todo!(),
+            _ => self.parse_expression_statement(),
         }
     }
 
@@ -97,7 +97,7 @@ impl<'a> Parser<'a> {
 
         let name = self.expect_token(TokenKind::Identifier)?;
         self.expect_token(TokenKind::Assign)?;
-        let expr = self.parse_expression(0)?;
+        let expr = self.parse_expression(0, false)?;
         self.expect_token(TokenKind::Semicolon)?;
 
         Ok(Statement::VarStatement {
@@ -114,9 +114,22 @@ impl<'a> Parser<'a> {
             ));
         }
 
-        let expr = self.parse_expression(0)?;
+        let expr = self.parse_expression(0, false)?;
         self.expect_token(TokenKind::Semicolon)?;
         Ok(Statement::ReturnStatement(expr))
+    }
+
+    pub fn parse_expression_statement(&mut self) -> Result<Statement, ParserError> {
+        let expr = self.parse_expression(0, true)?;
+        self.expect_token(TokenKind::Semicolon)?;
+        Ok(Statement::ExpressionStatement(expr))
+    }
+
+    fn prefix_precedence(op: &TokenKind) -> Option<Precedence> {
+        match op {
+            TokenKind::Bang | TokenKind::Minus => Some(Precedence::Prefix(5)),
+            _ => None,
+        }
     }
 
     fn infix_precedence(op: &TokenKind) -> Option<Precedence> {
@@ -127,34 +140,34 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn prefix_precedence(op: &TokenKind) -> Option<Precedence> {
-        match op {
-            TokenKind::Bang | TokenKind::Minus => Some(Precedence::Prefix(5)),
-            _ => None,
+    /// Expression parsing done through Pratt's algorithm:
+    /// * `min_prec` - used to set the min precedence
+    /// * `skip_eating` - used to parse only *expression statements* (so it should be `false` usually).
+    fn parse_expression(
+        &mut self,
+        min_prec: u8,
+        skip_eating: bool,
+    ) -> Result<Expression, ParserError> {
+        if !skip_eating {
+            self.eat_token();
         }
-    }
 
-    fn parse_expression(&mut self, min_prec: u8) -> Result<Expression, ParserError> {
-        self.eat_token();
         let mut expr = match self.cur.kind {
             TokenKind::Integer => Expression::IntegerLiteral(self.cur.literal.parse::<i32>()?),
             TokenKind::Identifier => Expression::Identifier(self.cur.literal.clone()),
             TokenKind::True => Expression::BooleanLiteral(true),
             TokenKind::False => Expression::BooleanLiteral(false),
+            // parse unary expressions based on prefix token precedences
             TokenKind::Bang | TokenKind::Minus => {
-                // parse unary expressions based on prefix token precedences
                 let operator = self.cur.kind.clone();
 
                 let Some(Precedence::Prefix(prec)) = Self::prefix_precedence(&self.cur.kind) else {
-                    return Err(ParserError::Unknown);
+                    unreachable!();
                 };
 
-                let right = self.parse_expression(prec)?;
+                let value = Box::new(self.parse_expression(prec, false)?);
 
-                Expression::UnaryExpression {
-                    operator,
-                    value: Box::new(right),
-                }
+                Expression::UnaryExpression { operator, value }
             }
             _ => {
                 return Err(ParserError::UnexpectedToken(self.cur.clone()));
@@ -175,7 +188,7 @@ impl<'a> Parser<'a> {
 
             expr = match self.cur.kind {
                 TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Asterisk => {
-                    let right = self.parse_expression(right_prec)?;
+                    let right = self.parse_expression(right_prec, false)?;
 
                     Expression::BinaryExpression {
                         left: Box::new(expr),
