@@ -121,7 +121,12 @@ impl<'a> Parser<'a> {
 
     pub fn parse_expression_statement(&mut self) -> Result<Statement, ParserError> {
         let expr = self.parse_expression(0, true)?;
-        self.expect_token(TokenKind::Semicolon)?;
+
+        // make semicolons optional
+        if self.next.kind == TokenKind::Semicolon {
+            self.eat_token();
+        }
+
         Ok(Statement::ExpressionStatement(expr))
     }
 
