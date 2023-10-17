@@ -146,8 +146,9 @@ impl<'a> Parser<'a> {
     }
 
     /// Expression parsing done through Pratt's algorithm:
-    /// * `min_prec` - used to set the min precedence
-    /// * `skip_eating` - used to parse only *expression statements* (so it should be `false` usually).
+    /// * `min_prec` - set the min precedence.
+    /// * `skip_eating` - skip the initial token eating.
+    /// Useful for parsing *expression statements* and *grouped expressions*.
     fn parse_expression(
         &mut self,
         min_prec: u8,
@@ -162,6 +163,21 @@ impl<'a> Parser<'a> {
             TokenKind::Identifier => Expression::Identifier(self.cur.literal.clone()),
             TokenKind::True => Expression::BooleanLiteral(true),
             TokenKind::False => Expression::BooleanLiteral(false),
+
+            TokenKind::LeftParen => {
+                self.eat_token();
+                let expr = match self.cur.kind {
+                    TokenKind::RightParen => Expression::Empty,
+                    _ => {
+                        let subexpr = self.parse_expression(0, true)?;
+                        self.expect_token(TokenKind::RightParen)?;
+                        subexpr
+                    }
+                };
+
+                Expression::GroupedExpression(Box::new(expr))
+            }
+
             // parse unary expressions based on prefix token precedences
             TokenKind::Bang | TokenKind::Minus => {
                 let operator = self.cur.kind.clone();
@@ -241,6 +257,16 @@ mod tests {
 
         let mut parser = Parser::new(&input);
         parser.parse_return_statement().unwrap();
+    }
+
+    #[test]
+    fn parse_expression_statement() {
+        let input = r#"
+            a + 2 * 2
+        "#;
+
+        let mut parser = Parser::new(&input);
+        parser.parse_expression_statement().unwrap();
     }
 
     #[test]

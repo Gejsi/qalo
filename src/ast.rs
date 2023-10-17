@@ -39,7 +39,9 @@ pub enum Expression {
         value: Box<Expression>,
     },
 
-    ParenthesizedExpression(Box<Expression>),
+    GroupedExpression(Box<Expression>),
+
+    Empty,
 }
 
 #[derive(Error, Debug)]
