@@ -139,8 +139,17 @@ impl<'a> Parser<'a> {
 
     fn infix_precedence(op: &TokenKind) -> Option<Precedence> {
         match op {
-            TokenKind::Plus | TokenKind::Minus => Some(Precedence::Infix(1, 2)),
-            TokenKind::Asterisk | TokenKind::Slash => Some(Precedence::Infix(3, 4)),
+            TokenKind::Equal
+            | TokenKind::NotEqual
+            | TokenKind::LessThan
+            | TokenKind::GreaterThan
+            | TokenKind::LessThanEqual
+            | TokenKind::GreaterThanEqual => Some(Precedence::Infix(1, 2)),
+
+            TokenKind::Plus | TokenKind::Minus => Some(Precedence::Infix(3, 4)),
+
+            TokenKind::Asterisk | TokenKind::Slash => Some(Precedence::Infix(5, 6)),
+
             _ => None,
         }
     }
@@ -208,7 +217,16 @@ impl<'a> Parser<'a> {
             let operator = self.cur.kind.clone();
 
             expr = match self.cur.kind {
-                TokenKind::Plus | TokenKind::Minus | TokenKind::Slash | TokenKind::Asterisk => {
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Slash
+                | TokenKind::Asterisk
+                | TokenKind::Equal
+                | TokenKind::NotEqual
+                | TokenKind::LessThan
+                | TokenKind::GreaterThan
+                | TokenKind::LessThanEqual
+                | TokenKind::GreaterThanEqual => {
                     let right = self.parse_expression(right_prec, false)?;
 
                     Expression::BinaryExpression {

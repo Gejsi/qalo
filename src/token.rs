@@ -22,9 +22,9 @@ pub enum TokenKind {
     Bang,
     Asterisk,
     Slash,
+
     Equal,
     NotEqual,
-
     LessThan,
     GreaterThan,
     LessThanEqual,
