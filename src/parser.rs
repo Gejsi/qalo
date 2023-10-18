@@ -130,26 +130,26 @@ impl<'a> Parser<'a> {
         Ok(Statement::ExpressionStatement(expr))
     }
 
-    fn prefix_precedence(op: &TokenKind) -> Option<Precedence> {
+    fn infix_precedence(op: &TokenKind) -> Option<Precedence> {
         match op {
-            TokenKind::Bang | TokenKind::Minus => Some(Precedence::Prefix(5)),
+            TokenKind::Equal | TokenKind::NotEqual => Some(Precedence::Infix(1, 2)),
+
+            TokenKind::LessThan
+            | TokenKind::GreaterThan
+            | TokenKind::LessThanEqual
+            | TokenKind::GreaterThanEqual => Some(Precedence::Infix(3, 4)),
+
+            TokenKind::Plus | TokenKind::Minus => Some(Precedence::Infix(5, 6)),
+
+            TokenKind::Asterisk | TokenKind::Slash => Some(Precedence::Infix(6, 7)),
+
             _ => None,
         }
     }
 
-    fn infix_precedence(op: &TokenKind) -> Option<Precedence> {
+    fn prefix_precedence(op: &TokenKind) -> Option<Precedence> {
         match op {
-            TokenKind::Equal
-            | TokenKind::NotEqual
-            | TokenKind::LessThan
-            | TokenKind::GreaterThan
-            | TokenKind::LessThanEqual
-            | TokenKind::GreaterThanEqual => Some(Precedence::Infix(1, 2)),
-
-            TokenKind::Plus | TokenKind::Minus => Some(Precedence::Infix(3, 4)),
-
-            TokenKind::Asterisk | TokenKind::Slash => Some(Precedence::Infix(5, 6)),
-
+            TokenKind::Bang | TokenKind::Minus => Some(Precedence::Prefix(8)),
             _ => None,
         }
     }
@@ -297,5 +297,57 @@ mod tests {
 
         let mut parser = Parser::new(&input);
         parser.parse_program().unwrap();
+    }
+
+    #[test]
+    fn operator_precedence() {
+        let tests = vec![
+            ("-a * b", "((-a) * b)"),
+            ("!-a", "(!(-a))"),
+            ("a + b + c", "((a + b) + c)"),
+            ("a * b * c", "((a * b) * c)"),
+            ("a * b / c", "((a * b) / c)"),
+            ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
+            ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"),
+            ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
+            ("5 > 4 != 3 < 4", "((5 > 4) != (3 < 4))"),
+            (
+                "3 + 4 * 5 == 3 * 1 + 4 * 5",
+                "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+            ),
+            ("true", "true"),
+            ("false", "false"),
+            ("3 > 5 == false", "((3 > 5) == false)"),
+            ("3 < 5 == true", "((3 < 5) == true)"),
+            ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
+            ("(5 + 5) * 2", "((5 + 5) * 2)"),
+            ("2 / (5 + 5)", "(2 / (5 + 5))"),
+            ("-(5 + 5)", "(-(5 + 5))"),
+            ("!(true == true)", "(!(true == true))"),
+            // ("a + add(b * c) + d", "((a + add((b * c))) + d)"),
+            // (
+            //     "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7* 8))",
+            //     "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
+            // ),
+            // (
+            //     "add(a + b + c * d / f + g)",
+            //     "add((((a + b) + ((c * d) / f)) + g)",
+            // ),
+            // (
+            //     "a * [1, 2, 3, 4][b * c] * d",
+            //     "((a * ([1, 2, 3, 4][(b * c)])) * d)",
+            // ),
+            // (
+            //     "add(a * b[2], b[1], 2 * [1, 2][1])",
+            //     "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))",
+            // ),
+        ];
+
+        for test in tests {
+            let (input, expected) = test;
+            let mut parser = Parser::new(&input);
+            let res = parser.parse_program().unwrap().to_string();
+            assert_eq!(expected, res);
+        }
     }
 }

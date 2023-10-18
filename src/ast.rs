@@ -1,4 +1,4 @@
-use std::{num::ParseIntError, rc::Rc};
+use std::{fmt, num::ParseIntError, rc::Rc};
 
 use thiserror::Error;
 
@@ -6,6 +6,15 @@ use crate::token::{Token, TokenKind};
 
 #[derive(Debug)]
 pub struct Program(pub Vec<Statement>);
+
+impl fmt::Display for Program {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for statement in &self.0 {
+            write!(f, "{}", statement)?;
+        }
+        Ok(())
+    }
+}
 
 #[derive(Debug)]
 pub enum Statement {
@@ -18,6 +27,18 @@ pub enum Statement {
     ReturnStatement(Expression),
 
     ExpressionStatement(Expression),
+}
+
+impl fmt::Display for Statement {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Statement::VarStatement { kind, name, value } => {
+                write!(f, "{} {} = {};", kind, name, value)
+            }
+            Statement::ReturnStatement(expr) => write!(f, "return {};", expr),
+            Statement::ExpressionStatement(expr) => write!(f, "{}", expr),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -42,6 +63,28 @@ pub enum Expression {
     GroupedExpression(Box<Expression>),
 
     Empty,
+}
+
+impl fmt::Display for Expression {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Expression::Identifier(s) => write!(f, "{}", s),
+            Expression::IntegerLiteral(n) => write!(f, "{}", n),
+            Expression::BooleanLiteral(b) => write!(f, "{}", b),
+            Expression::BinaryExpression {
+                left,
+                operator,
+                right,
+            } => {
+                write!(f, "({} {} {})", left, operator, right)
+            }
+            Expression::UnaryExpression { operator, value } => {
+                write!(f, "({}{})", operator, value)
+            }
+            Expression::GroupedExpression(expr) => write!(f, "{}", expr),
+            Expression::Empty => write!(f, ""),
+        }
+    }
 }
 
 #[derive(Error, Debug)]
