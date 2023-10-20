@@ -62,6 +62,11 @@ pub enum Expression {
 
     GroupedExpression(Box<Expression>),
 
+    CallExpression {
+        path: String,
+        arguments: Vec<CallExpressionArgument>,
+    },
+
     Empty,
 }
 
@@ -82,8 +87,33 @@ impl fmt::Display for Expression {
                 write!(f, "({}{})", operator, value)
             }
             Expression::GroupedExpression(expr) => write!(f, "{}", expr),
+            Expression::CallExpression { path, arguments } => {
+                write!(f, "{}(", path)?;
+
+                for (i, arg) in arguments.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+
+                    write!(f, "{}", arg)?;
+                }
+
+                write!(f, ")")
+            }
             Expression::Empty => write!(f, ""),
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct CallExpressionArgument {
+    pub name: String,
+    pub value: Expression,
+}
+
+impl fmt::Display for CallExpressionArgument {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}: {}", self.name, self.value)
     }
 }
 
