@@ -155,26 +155,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_call_expression_arguments(
-        &mut self,
-    ) -> Result<Vec<CallExpressionArgument>, ParserError> {
-        let mut args: Vec<CallExpressionArgument> = vec![];
-
-        // while self.cur.kind != TokenKind::RightParen {}
-        while self.next.kind != TokenKind::RightParen {
-            let name = self.expect_token(TokenKind::Identifier)?.literal.clone();
-            self.expect_token(TokenKind::Colon)?;
-            let value = self.parse_expression(0, false)?;
-            args.push(CallExpressionArgument { name, value });
-
-            if self.next.kind == TokenKind::Comma {
-                self.eat_token();
-            }
-        }
-
-        Ok(args)
-    }
-
     /// Expression parsing done through Pratt's algorithm:
     /// * `min_prec` - set the min precedence.
     /// * `skip_eating` - skip the initial token eating. Useful for parsing *expression statements* and *grouped expressions*.
@@ -194,42 +174,16 @@ impl<'a> Parser<'a> {
 
             TokenKind::Identifier => {
                 if self.next.kind == TokenKind::LeftParen {
-                    let path = self.cur.literal.clone();
-                    self.eat_token();
-                    let arguments = self.parse_call_expression_arguments()?;
-                    self.expect_token(TokenKind::RightParen)?;
-                    Expression::CallExpression { path, arguments }
+                    self.parse_call_expression()?
                 } else {
                     Expression::Identifier(self.cur.literal.clone())
                 }
             }
 
-            TokenKind::LeftParen => {
-                self.eat_token();
-                let expr = match self.cur.kind {
-                    TokenKind::RightParen => Expression::Empty,
-                    _ => {
-                        let subexpr = self.parse_expression(0, true)?;
-                        self.expect_token(TokenKind::RightParen)?;
-                        subexpr
-                    }
-                };
-
-                Expression::GroupedExpression(Box::new(expr))
-            }
+            TokenKind::LeftParen => self.parse_grouped_expression()?,
 
             // parse unary expressions based on prefix token precedences
-            TokenKind::Bang | TokenKind::Minus => {
-                let operator = self.cur.kind.clone();
-
-                let Some(Precedence::Prefix(prec)) = Self::prefix_precedence(&self.cur.kind) else {
-                    unreachable!();
-                };
-
-                let value = Box::new(self.parse_expression(prec, false)?);
-
-                Expression::UnaryExpression { operator, value }
-            }
+            TokenKind::Bang | TokenKind::Minus => self.parse_unary_expression()?,
 
             _ => {
                 return Err(ParserError::UnexpectedToken(self.cur.clone()));
@@ -274,6 +228,53 @@ impl<'a> Parser<'a> {
         }
 
         Ok(expr)
+    }
+
+    fn parse_call_expression(&mut self) -> Result<Expression, ParserError> {
+        let path = self.cur.literal.clone();
+        self.eat_token();
+
+        let mut arguments: Vec<CallExpressionArgument> = vec![];
+
+        while self.next.kind != TokenKind::RightParen {
+            let name = self.expect_token(TokenKind::Identifier)?.literal.clone();
+            self.expect_token(TokenKind::Colon)?;
+            let value = self.parse_expression(0, false)?;
+            arguments.push(CallExpressionArgument { name, value });
+
+            if self.next.kind == TokenKind::Comma {
+                self.eat_token();
+            }
+        }
+
+        self.expect_token(TokenKind::RightParen)?;
+        Ok(Expression::CallExpression { path, arguments })
+    }
+
+    fn parse_grouped_expression(&mut self) -> Result<Expression, ParserError> {
+        self.eat_token();
+        let expr = match self.cur.kind {
+            TokenKind::RightParen => Expression::Empty,
+            _ => {
+                let subexpr = self.parse_expression(0, true)?;
+                self.expect_token(TokenKind::RightParen)?;
+                subexpr
+            }
+        };
+
+        Ok(Expression::GroupedExpression(Box::new(expr)))
+    }
+
+    fn parse_unary_expression(&mut self) -> Result<Expression, ParserError> {
+        let operator = self.cur.kind.clone();
+
+        let Some(Precedence::Prefix(prec)) = Self::prefix_precedence(&self.cur.kind) else {
+            unreachable!();
+        };
+
+        let value = Box::new(self.parse_expression(prec, false)?);
+
+        Ok(Expression::UnaryExpression { operator, value })
     }
 }
 
@@ -325,6 +326,7 @@ mod tests {
             let a = 1;
             let b = a + 1;
             return a / b;
+            a + b
         "#;
 
         let mut parser = Parser::new(&input);
@@ -356,15 +358,18 @@ mod tests {
             ("2 / (5 + 5)", "(2 / (5 + 5))"),
             ("-(5 + 5)", "(-(5 + 5))"),
             ("!(true == true)", "(!(true == true))"),
-            // ("a + add(b * c) + d", "((a + add((b * c))) + d)"),
-            // (
-            //     "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7* 8))",
-            //     "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
-            // ),
-            // (
-            //     "add(a + b + c * d / f + g)",
-            //     "add((((a + b) + ((c * d) / f)) + g)",
-            // ),
+            (
+                "a + add(first: b * c) + d",
+                "((a + add(first: (b * c))) + d)",
+            ),
+            (
+                "add(a: 1, b: 2 * 3, c: sum(first: 6, second: 7 * 8))",
+                "add(a: 1, b: (2 * 3), c: sum(first: 6, second: (7 * 8)))",
+            ),
+            (
+                "add(first: a + b + c * d / f + g)",
+                "add(first: (((a + b) + ((c * d) / f)) + g))",
+            ),
             // (
             //     "a * [1, 2, 3, 4][b * c] * d",
             //     "((a * ([1, 2, 3, 4][(b * c)])) * d)",

@@ -8,7 +8,7 @@ cargo watch -w src -x run -c
 */
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let a = add(first: 1, second: 2);
+        let a = add(first: a + b + c * d / f + g);
     "#;
 
     // let mut lexer = Lexer::new(&input);
