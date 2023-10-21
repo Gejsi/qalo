@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    ast::{Expression, ParserError, Program, Statement},
+    ast::{CallExpressionArgument, Expression, ParserError, Program, Statement},
     lexer::Lexer,
     token::{Token, TokenKind},
 };
@@ -59,6 +59,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn expect_token(&mut self, token_kind: TokenKind) -> Result<Rc<Token>, ParserError> {
+        // println!("{:?}, {:?}, {:?}", self.cur, self.next, token_kind);
         if self.next.kind != token_kind {
             return Err(ParserError::UnexpectedToken(self.next.clone()));
         }
@@ -154,10 +155,29 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn parse_call_expression_arguments(
+        &mut self,
+    ) -> Result<Vec<CallExpressionArgument>, ParserError> {
+        let mut args: Vec<CallExpressionArgument> = vec![];
+
+        // while self.cur.kind != TokenKind::RightParen {}
+        while self.next.kind != TokenKind::RightParen {
+            let name = self.expect_token(TokenKind::Identifier)?.literal.clone();
+            self.expect_token(TokenKind::Colon)?;
+            let value = self.parse_expression(0, false)?;
+            args.push(CallExpressionArgument { name, value });
+
+            if self.next.kind == TokenKind::Comma {
+                self.eat_token();
+            }
+        }
+
+        Ok(args)
+    }
+
     /// Expression parsing done through Pratt's algorithm:
     /// * `min_prec` - set the min precedence.
-    /// * `skip_eating` - skip the initial token eating.
-    /// Useful for parsing *expression statements* and *grouped expressions*.
+    /// * `skip_eating` - skip the initial token eating. Useful for parsing *expression statements* and *grouped expressions*.
     fn parse_expression(
         &mut self,
         min_prec: u8,
@@ -169,9 +189,20 @@ impl<'a> Parser<'a> {
 
         let mut expr = match self.cur.kind {
             TokenKind::Integer => Expression::IntegerLiteral(self.cur.literal.parse::<i32>()?),
-            TokenKind::Identifier => Expression::Identifier(self.cur.literal.clone()),
             TokenKind::True => Expression::BooleanLiteral(true),
             TokenKind::False => Expression::BooleanLiteral(false),
+
+            TokenKind::Identifier => {
+                if self.next.kind == TokenKind::LeftParen {
+                    let path = self.cur.literal.clone();
+                    self.eat_token();
+                    let arguments = self.parse_call_expression_arguments()?;
+                    self.expect_token(TokenKind::RightParen)?;
+                    Expression::CallExpression { path, arguments }
+                } else {
+                    Expression::Identifier(self.cur.literal.clone())
+                }
+            }
 
             TokenKind::LeftParen => {
                 self.eat_token();
@@ -199,6 +230,7 @@ impl<'a> Parser<'a> {
 
                 Expression::UnaryExpression { operator, value }
             }
+
             _ => {
                 return Err(ParserError::UnexpectedToken(self.cur.clone()));
             }
