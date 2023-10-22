@@ -6,27 +6,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
         return 1;
 
-        { let a = 2; }
+        { a + a return 1; }
 
         { 2 + 2; }
 
         let b = a;
+        let b = b;
     "#;
-
-    // let mut lexer = Lexer::new(&input);
-
-    // loop {
-    //     let token = lexer.next_token();
-    //     println!("{:?}", token);
-
-    //     if token.kind == TokenKind::Eof {
-    //         break;
-    //     }
-    // }
 
     let mut parser = Parser::new(&input);
     let res = parser.parse_program()?;
-    println!("{:#?}", res);
+    println!("{}", res.to_string());
 
     Ok(())
 }
