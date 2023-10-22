@@ -59,7 +59,6 @@ impl<'a> Parser<'a> {
     }
 
     pub fn expect_token(&mut self, token_kind: TokenKind) -> Result<Rc<Token>, ParserError> {
-        // println!("{:?}, {:?}, {:?}", self.cur, self.next, token_kind);
         if self.next.kind != token_kind {
             return Err(ParserError::UnexpectedToken(self.next.clone()));
         }
@@ -83,19 +82,13 @@ impl<'a> Parser<'a> {
         match self.cur.kind {
             TokenKind::Let => self.parse_var_statement(),
             TokenKind::Return => self.parse_return_statement(),
+            TokenKind::LeftBrace => self.parse_block_statement(),
             _ => self.parse_expression_statement(),
         }
     }
 
     pub fn parse_var_statement(&mut self) -> Result<Statement, ParserError> {
-        let kind = if self.cur.kind != TokenKind::Let {
-            return Err(ParserError::SyntaxError(
-                "Binding statements must start with `let`".to_string(),
-            ));
-        } else {
-            self.cur.kind.clone()
-        };
-
+        let kind = self.cur.kind.clone();
         let name = self.expect_token(TokenKind::Identifier)?;
         self.expect_token(TokenKind::Assign)?;
         let expr = self.parse_expression(0, false)?;
@@ -109,15 +102,23 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_return_statement(&mut self) -> Result<Statement, ParserError> {
-        if self.cur.kind != TokenKind::Return {
-            return Err(ParserError::SyntaxError(
-                "Return statements must start with `return`".to_string(),
-            ));
-        }
-
         let expr = self.parse_expression(0, false)?;
         self.expect_token(TokenKind::Semicolon)?;
         Ok(Statement::ReturnStatement(expr))
+    }
+
+    pub fn parse_block_statement(&mut self) -> Result<Statement, ParserError> {
+        // consume {
+        self.eat_token();
+        let mut statements: Vec<Statement> = vec![];
+
+        while self.cur.kind != TokenKind::RightBrace {
+            let statement = self.parse_statement()?;
+            statements.push(statement);
+            self.eat_token();
+        }
+
+        Ok(Statement::BlockStatement(statements))
     }
 
     pub fn parse_expression_statement(&mut self) -> Result<Statement, ParserError> {
@@ -230,6 +231,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
+    // TODO: verify empty call expressions
     fn parse_call_expression(&mut self) -> Result<Expression, ParserError> {
         let path = self.cur.literal.clone();
         self.eat_token();
@@ -318,6 +320,18 @@ mod tests {
 
         let mut parser = Parser::new(&input);
         parser.parse_expression_statement().unwrap();
+    }
+
+    #[test]
+    fn parse_block_statement() {
+        let input = r#"
+            { let a = 2; }
+
+            { 2 + 2; }
+        "#;
+
+        let mut parser = Parser::new(&input);
+        parser.parse_block_statement().unwrap();
     }
 
     #[test]

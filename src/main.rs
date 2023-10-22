@@ -2,13 +2,15 @@ use std::error::Error;
 
 use jerboa::parser::Parser;
 
-/*
-To run with auto-reload:
-cargo watch -w src -x run -c
-*/
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let a = add(first: a + b + c * d / f + g);
+        return 1;
+
+        { let a = 2; }
+
+        { 2 + 2; }
+
+        let b = a;
     "#;
 
     // let mut lexer = Lexer::new(&input);
@@ -24,7 +26,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut parser = Parser::new(&input);
     let res = parser.parse_program()?;
-    println!("{:#?}", res.to_string());
+    println!("{:#?}", res);
 
     Ok(())
 }

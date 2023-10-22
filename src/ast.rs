@@ -27,6 +27,8 @@ pub enum Statement {
     ReturnStatement(Expression),
 
     ExpressionStatement(Expression),
+
+    BlockStatement(Vec<Statement>),
 }
 
 impl fmt::Display for Statement {
@@ -37,6 +39,13 @@ impl fmt::Display for Statement {
             }
             Statement::ReturnStatement(expr) => write!(f, "return {};", expr),
             Statement::ExpressionStatement(expr) => write!(f, "{}", expr),
+            Statement::BlockStatement(statements) => {
+                write!(f, "{{\n")?;
+                for statement in statements {
+                    write!(f, "{}\n", statement)?;
+                }
+                write!(f, "}}")
+            }
         }
     }
 }
@@ -67,6 +76,9 @@ pub enum Expression {
         arguments: Vec<CallExpressionArgument>,
     },
 
+    // IfExpression {
+    //     condition: Box<Expression>,
+    // },
     Empty,
 }
 
