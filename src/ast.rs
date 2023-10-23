@@ -76,9 +76,12 @@ pub enum Expression {
         arguments: Vec<CallExpressionArgument>,
     },
 
-    // IfExpression {
-    //     condition: Box<Expression>,
-    // },
+    IfExpression {
+        condition: Box<Expression>,
+        consequence: Box<Statement>,
+        alternative: Option<Box<Statement>>,
+    },
+
     Empty,
 }
 
@@ -112,6 +115,19 @@ impl fmt::Display for Expression {
 
                 write!(f, ")")
             }
+
+            Expression::IfExpression {
+                condition,
+                consequence,
+                alternative,
+            } => {
+                if let Some(alternative) = alternative {
+                    write!(f, "if {} {} else {}", condition, consequence, alternative)
+                } else {
+                    write!(f, "if {} {}", condition, consequence)
+                }
+            }
+
             Expression::Empty => write!(f, ""),
         }
     }

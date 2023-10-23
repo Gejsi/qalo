@@ -124,7 +124,7 @@ impl<'a> Parser<'a> {
     pub fn parse_expression_statement(&mut self) -> Result<Statement, ParserError> {
         let expr = self.parse_expression(0, true)?;
 
-        // make semicolons optional
+        // make semicolon optional
         if self.next.kind == TokenKind::Semicolon {
             self.eat_token();
         }
@@ -185,6 +185,8 @@ impl<'a> Parser<'a> {
 
             // parse unary expressions based on prefix token precedences
             TokenKind::Bang | TokenKind::Minus => self.parse_unary_expression()?,
+
+            TokenKind::If => self.parse_if_expression()?,
 
             _ => {
                 return Err(ParserError::UnexpectedToken(self.cur.clone()));
@@ -277,6 +279,26 @@ impl<'a> Parser<'a> {
         let value = Box::new(self.parse_expression(prec, false)?);
 
         Ok(Expression::UnaryExpression { operator, value })
+    }
+
+    fn parse_if_expression(&mut self) -> Result<Expression, ParserError> {
+        let condition = self.parse_expression(0, false)?;
+        self.expect_token(TokenKind::LeftBrace)?;
+        let consequence = self.parse_block_statement()?;
+
+        let alternative = if self.next.kind == TokenKind::Else {
+            self.eat_token();
+            self.expect_token(TokenKind::LeftBrace)?;
+            Some(Box::new(self.parse_block_statement()?))
+        } else {
+            None
+        };
+
+        Ok(Expression::IfExpression {
+            condition: Box::new(condition),
+            consequence: Box::new(consequence),
+            alternative,
+        })
     }
 }
 
