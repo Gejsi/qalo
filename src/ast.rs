@@ -35,16 +35,16 @@ impl fmt::Display for Statement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Statement::VarStatement { kind, name, value } => {
-                write!(f, "{} {} = {};\n", kind, name, value)
+                write!(f, "{} {} = {};", kind, name, value)
             }
-            Statement::ReturnStatement(expr) => write!(f, "return {};\n", expr),
-            Statement::ExpressionStatement(expr) => write!(f, "{}\n", expr),
+            Statement::ReturnStatement(expr) => write!(f, "return {};", expr),
+            Statement::ExpressionStatement(expr) => write!(f, "{}", expr),
             Statement::BlockStatement(statements) => {
-                write!(f, "{{\n")?;
+                write!(f, "{{")?;
                 for statement in statements {
                     write!(f, "{}", statement)?;
                 }
-                write!(f, "}}\n")
+                write!(f, "}}")
             }
         }
     }

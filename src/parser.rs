@@ -423,4 +423,21 @@ mod tests {
             assert_eq!(expected, res);
         }
     }
+
+    #[test]
+    fn parse_if_expression() {
+        let input = r#"
+            let a = if 2 * 2 > 1 {
+                let a = 3;
+                a
+            } else {
+                b
+            };
+
+            if true { 2 };
+        "#;
+
+        let mut parser = Parser::new(&input);
+        parser.parse_program().unwrap();
+    }
 }
