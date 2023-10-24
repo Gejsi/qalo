@@ -188,6 +188,8 @@ impl<'a> Parser<'a> {
 
             TokenKind::If => self.parse_if_expression()?,
 
+            TokenKind::Function => self.parse_function_expression()?,
+
             _ => {
                 return Err(ParserError::UnexpectedToken(self.cur.clone()));
             }
@@ -298,6 +300,31 @@ impl<'a> Parser<'a> {
             condition: Box::new(condition),
             consequence: Box::new(consequence),
             alternative,
+        })
+    }
+
+    fn parse_function_expression(&mut self) -> Result<Expression, ParserError> {
+        let name = self.expect_token(TokenKind::Identifier)?.literal.clone();
+        self.expect_token(TokenKind::LeftParen)?;
+        let mut parameters: Vec<String> = vec![];
+
+        while self.next.kind != TokenKind::RightParen {
+            self.eat_token();
+            parameters.push(self.cur.literal.clone());
+
+            if self.next.kind == TokenKind::Comma {
+                self.eat_token();
+            }
+        }
+
+        self.expect_token(TokenKind::RightParen)?;
+        self.expect_token(TokenKind::LeftBrace)?;
+        let body = Box::new(self.parse_block_statement()?);
+
+        Ok(Expression::FunctionExpression {
+            name,
+            parameters,
+            body,
         })
     }
 }

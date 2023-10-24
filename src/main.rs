@@ -4,12 +4,10 @@ use jerboa::parser::Parser;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let a = if 2 * 2 > 1 {
-            let a = 3;
+        fn foo(arg) {
+            let a = 2;
             a
-        } else {
-            b
-        };
+        }
     "#;
 
     let mut parser = Parser::new(&input);

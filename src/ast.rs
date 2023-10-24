@@ -82,6 +82,12 @@ pub enum Expression {
         alternative: Option<Box<Statement>>,
     },
 
+    FunctionExpression {
+        name: String,
+        parameters: Vec<String>,
+        body: Box<Statement>,
+    },
+
     Empty,
 }
 
@@ -126,6 +132,21 @@ impl fmt::Display for Expression {
                 } else {
                     write!(f, "if {} {}", condition, consequence)
                 }
+            }
+
+            Expression::FunctionExpression {
+                name,
+                parameters,
+                body,
+            } => {
+                write!(f, "fn {}(", name)?;
+                for (i, param) in parameters.iter().enumerate() {
+                    write!(f, "{}", param)?;
+                    if i < parameters.len() - 1 {
+                        write!(f, ", ")?;
+                    }
+                }
+                write!(f, ") {}", body)
             }
 
             Expression::Empty => write!(f, ""),
