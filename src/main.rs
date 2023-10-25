@@ -4,7 +4,7 @@ use jerboa::parser::Parser;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        fn foo(arg) {
+        fn foo(aa, bb) {
             let a = 2;
             a
         }

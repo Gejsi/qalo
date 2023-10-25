@@ -309,11 +309,17 @@ impl<'a> Parser<'a> {
         let mut parameters: Vec<String> = vec![];
 
         while self.next.kind != TokenKind::RightParen {
-            self.eat_token();
+            if self.next.kind != TokenKind::Identifier && self.next.kind != TokenKind::Comma {
+                break;
+            }
+
+            self.expect_token(TokenKind::Identifier)?;
             parameters.push(self.cur.literal.clone());
 
             if self.next.kind == TokenKind::Comma {
                 self.eat_token();
+            } else if self.next.kind != TokenKind::RightParen {
+                return Err(ParserError::UnexpectedToken(self.next.clone()));
             }
         }
 
@@ -462,6 +468,18 @@ mod tests {
             };
 
             if true { 2 };
+        "#;
+
+        let mut parser = Parser::new(&input);
+        parser.parse_program().unwrap();
+    }
+
+    #[test]
+    fn parse_function_expression() {
+        let input = r#"
+            fn foo(arg, bar) {
+                let a = 2;
+            }
         "#;
 
         let mut parser = Parser::new(&input);
