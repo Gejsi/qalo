@@ -83,7 +83,6 @@ pub enum Expression {
     },
 
     FunctionExpression {
-        name: String,
         parameters: Vec<String>,
         body: Box<Statement>,
     },
@@ -134,12 +133,8 @@ impl fmt::Display for Expression {
                 }
             }
 
-            Expression::FunctionExpression {
-                name,
-                parameters,
-                body,
-            } => {
-                write!(f, "fn {}(", name)?;
+            Expression::FunctionExpression { parameters, body } => {
+                write!(f, "fn(")?;
                 for (i, param) in parameters.iter().enumerate() {
                     write!(f, "{}", param)?;
                     if i < parameters.len() - 1 {

@@ -159,7 +159,7 @@ impl<'a> Parser<'a> {
     /// Expression parsing done through Pratt's algorithm:
     /// * `min_prec` - set the min precedence.
     /// * `skip_eating` - skip the initial token eating. Useful for parsing *expression statements* and *grouped expressions*.
-    fn parse_expression(
+    pub fn parse_expression(
         &mut self,
         min_prec: u8,
         skip_eating: bool,
@@ -235,13 +235,11 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    // TODO: verify empty call expressions
-    fn parse_call_expression(&mut self) -> Result<Expression, ParserError> {
+    pub fn parse_call_expression(&mut self) -> Result<Expression, ParserError> {
         let path = self.cur.literal.clone();
         self.eat_token();
 
         let mut arguments: Vec<CallExpressionArgument> = vec![];
-
         while self.next.kind != TokenKind::RightParen {
             let name = self.expect_token(TokenKind::Identifier)?.literal.clone();
             self.expect_token(TokenKind::Colon)?;
@@ -257,7 +255,7 @@ impl<'a> Parser<'a> {
         Ok(Expression::CallExpression { path, arguments })
     }
 
-    fn parse_grouped_expression(&mut self) -> Result<Expression, ParserError> {
+    pub fn parse_grouped_expression(&mut self) -> Result<Expression, ParserError> {
         self.eat_token();
         let expr = match self.cur.kind {
             TokenKind::RightParen => Expression::Empty,
@@ -271,7 +269,7 @@ impl<'a> Parser<'a> {
         Ok(Expression::GroupedExpression(Box::new(expr)))
     }
 
-    fn parse_unary_expression(&mut self) -> Result<Expression, ParserError> {
+    pub fn parse_unary_expression(&mut self) -> Result<Expression, ParserError> {
         let operator = self.cur.kind.clone();
 
         let Some(Precedence::Prefix(prec)) = Self::prefix_precedence(&self.cur.kind) else {
@@ -283,7 +281,7 @@ impl<'a> Parser<'a> {
         Ok(Expression::UnaryExpression { operator, value })
     }
 
-    fn parse_if_expression(&mut self) -> Result<Expression, ParserError> {
+    pub fn parse_if_expression(&mut self) -> Result<Expression, ParserError> {
         let condition = self.parse_expression(0, false)?;
         self.expect_token(TokenKind::LeftBrace)?;
         let consequence = self.parse_block_statement()?;
@@ -303,11 +301,10 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_function_expression(&mut self) -> Result<Expression, ParserError> {
-        let name = self.expect_token(TokenKind::Identifier)?.literal.clone();
+    pub fn parse_function_expression(&mut self) -> Result<Expression, ParserError> {
         self.expect_token(TokenKind::LeftParen)?;
-        let mut parameters: Vec<String> = vec![];
 
+        let mut parameters: Vec<String> = vec![];
         while self.next.kind != TokenKind::RightParen {
             if self.next.kind != TokenKind::Identifier && self.next.kind != TokenKind::Comma {
                 break;
@@ -327,11 +324,7 @@ impl<'a> Parser<'a> {
         self.expect_token(TokenKind::LeftBrace)?;
         let body = Box::new(self.parse_block_statement()?);
 
-        Ok(Expression::FunctionExpression {
-            name,
-            parameters,
-            body,
-        })
+        Ok(Expression::FunctionExpression { parameters, body })
     }
 }
 
@@ -477,9 +470,13 @@ mod tests {
     #[test]
     fn parse_function_expression() {
         let input = r#"
-            fn foo(arg, bar) {
-                let a = 2;
-            }
+            let a = fn(arg) {
+                let bar = 2;
+
+                return fn(foo) {
+                    bar
+                };
+            };
         "#;
 
         let mut parser = Parser::new(&input);

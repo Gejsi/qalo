@@ -4,10 +4,13 @@ use jerboa::parser::Parser;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        fn foo(aa, bb) {
-            let a = 2;
-            a
-        }
+        let a = fn(arg) {
+            let bar = 2;
+
+            return fn(foo) {
+                bar
+            };
+        };
     "#;
 
     let mut parser = Parser::new(&input);
