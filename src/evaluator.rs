@@ -71,8 +71,7 @@ impl<'a> Evaluator<'a> {
                     },
                     (left_value, right_value) => {
                         return Err(EvalError::TypeMismatch(format!(
-                            "Cannot perform operation between {:?} and {:?}",
-                            left_value, right_value
+                            "Cannot perform operation between {left_value} and {right_value}",
                         )))
                     }
                 }
