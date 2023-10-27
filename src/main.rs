@@ -4,7 +4,7 @@ use jerboa::evaluator::Evaluator;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        2 % 2;
+        2 % 3;
     "#;
 
     let mut evaluator = Evaluator::new(&input);

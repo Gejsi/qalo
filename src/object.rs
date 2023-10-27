@@ -27,6 +27,9 @@ pub enum EvalError {
     #[error("Type mismatch: {0}")]
     TypeMismatch(String),
 
+    #[error("Modulus of zero isn't allowed")]
+    ModulusByZero,
+
     #[error("Division by zero isn't allowed")]
     DivisionByZero,
 

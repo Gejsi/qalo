@@ -61,6 +61,13 @@ impl<'a> Evaluator<'a> {
                         TokenKind::GreaterThan => Object::Boolean(left_value > right_value),
                         TokenKind::LessThanEqual => Object::Boolean(left_value <= right_value),
                         TokenKind::GreaterThanEqual => Object::Boolean(left_value >= right_value),
+                        TokenKind::Modulus => {
+                            if right_value == 0 {
+                                return Err(EvalError::ModulusByZero);
+                            } else {
+                                Object::Integer(left_value % right_value)
+                            }
+                        }
                         TokenKind::Slash => {
                             if right_value == 0 {
                                 return Err(EvalError::DivisionByZero);

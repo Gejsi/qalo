@@ -163,6 +163,10 @@ impl<'a> Lexer<'a> {
                 kind: TokenKind::Asterisk,
                 literal: "*".to_string(),
             },
+            '%' => Token {
+                kind: TokenKind::Modulus,
+                literal: "%".to_string(),
+            },
             '(' => Token {
                 kind: TokenKind::LeftParen,
                 literal: "(".to_string(),

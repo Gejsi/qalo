@@ -143,7 +143,9 @@ impl<'a> Parser<'a> {
 
             TokenKind::Plus | TokenKind::Minus => Some(Precedence::Infix(5, 6)),
 
-            TokenKind::Asterisk | TokenKind::Slash => Some(Precedence::Infix(6, 7)),
+            TokenKind::Asterisk | TokenKind::Slash | TokenKind::Modulus => {
+                Some(Precedence::Infix(6, 7))
+            }
 
             _ => None,
         }
@@ -212,6 +214,7 @@ impl<'a> Parser<'a> {
                 | TokenKind::Minus
                 | TokenKind::Slash
                 | TokenKind::Asterisk
+                | TokenKind::Modulus
                 | TokenKind::Equal
                 | TokenKind::NotEqual
                 | TokenKind::LessThan

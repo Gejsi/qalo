@@ -24,6 +24,7 @@ pub enum TokenKind {
     Bang,
     Asterisk,
     Slash,
+    Modulus,
 
     Equal,
     NotEqual,
@@ -84,6 +85,7 @@ impl fmt::Display for TokenKind {
             TokenKind::Bang => write!(f, "!"),
             TokenKind::Asterisk => write!(f, "*"),
             TokenKind::Slash => write!(f, "/"),
+            TokenKind::Modulus => write!(f, "%"),
 
             TokenKind::Equal => write!(f, "=="),
             TokenKind::NotEqual => write!(f, "!="),
