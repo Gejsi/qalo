@@ -70,11 +70,13 @@ impl<'a> Evaluator<'a> {
                         }
                         _ => return Err(EvalError::UnsupportedOperator(operator)),
                     },
+
                     (Object::Boolean(left_value), Object::Boolean(right_value)) => match operator {
                         TokenKind::Equal => Object::Boolean(left_value == right_value),
                         TokenKind::NotEqual => Object::Boolean(left_value != right_value),
                         _ => return Err(EvalError::UnsupportedOperator(operator)),
                     },
+
                     (left_value, right_value) => {
                         return Err(EvalError::TypeMismatch(format!(
                             "Cannot perform operation between {left_value} and {right_value}",
@@ -103,8 +105,31 @@ mod tests {
     use super::*;
 
     #[test]
-    fn evaluate_integer_literal() {
+    fn eval_integer_literal() {
         let input = "5";
+        let mut evaluator = Evaluator::new(&input);
+        evaluator.eval_program().unwrap();
+    }
+
+    #[test]
+    fn eval_boolean_literal() {
+        let input = "true";
+        let mut evaluator = Evaluator::new(&input);
+        evaluator.eval_program().unwrap();
+    }
+
+    #[test]
+    fn eval_binary_expressions() {
+        let input = r#"
+            2 + 3;
+            4 - 1;
+            5 * 6;
+            10 / 2;
+            7 == 7;
+            8 != 9;
+            true == true;
+            false != true;
+        "#;
         let mut evaluator = Evaluator::new(&input);
         evaluator.eval_program().unwrap();
     }
