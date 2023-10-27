@@ -171,19 +171,79 @@ mod tests {
     }
 
     #[test]
-    fn eval_binary_expressions() {
-        let input = r#"
-            2 + 3;
-            4 - 1;
-            5 * 6;
-            10 / 2;
-            7 == 7;
-            8 != 9;
-            true == true;
-            false != true;
-        "#;
+    fn eval_boolean_expressions() {
+        let tests = vec![
+            ("true", true),
+            ("false", false),
+            ("1 < 2", true),
+            ("1 > 2", false),
+            ("1 < 1", false),
+            ("1 > 1", false),
+            ("1 == 1", true),
+            ("1 != 1", false),
+            ("1 == 2", false),
+            ("1 != 2", true),
+            ("true == true", true),
+            ("false == false", true),
+            ("true == false", false),
+            ("true != false", true),
+            ("false != true", true),
+            // ("(1 < 2) == true", true),
+            // ("(1 < 2) == false", false),
+            // ("(1 > 2) == true", false),
+            // ("(1 > 2) == false", true),
+        ];
 
-        let mut evaluator = Evaluator::new(&input);
-        evaluator.eval_program().unwrap();
+        for (input, expected) in tests {
+            let mut evaluator = Evaluator::new(input);
+            let result = &evaluator.eval_program().unwrap()[0];
+
+            let expected_obj = match expected {
+                true => &Object::Boolean(true),
+                false => &Object::Boolean(false),
+            };
+
+            assert_eq!(result, expected_obj);
+        }
+    }
+
+    #[test]
+    fn eval_binary_expressions() {
+        let tests = vec![
+            ("2 + 3", &Object::Integer(5)),
+            ("4 - 1", &Object::Integer(3)),
+            ("5 * 6", &Object::Integer(30)),
+            ("10 / 2", &Object::Integer(5)),
+            ("7 == 7", &Object::Boolean(true)),
+            ("8 != 9", &Object::Boolean(true)),
+            ("true == true", &Object::Boolean(true)),
+            ("false != true", &Object::Boolean(true)),
+        ];
+
+        for (input, expected) in tests {
+            let mut evaluator = Evaluator::new(input);
+            let result = &evaluator.eval_program().unwrap()[0];
+            assert_eq!(result, expected);
+        }
+    }
+
+    #[test]
+    fn eval_unary_expressions() {
+        let tests = vec![
+            ("-2", &Object::Integer(-2)),
+            ("!true", &Object::Boolean(false)),
+            ("!false", &Object::Boolean(true)),
+            ("!5", &Object::Boolean(false)),
+            ("!!5", &Object::Boolean(true)),
+            ("!0", &Object::Boolean(true)),
+            ("!!true", &Object::Boolean(true)),
+            ("!!false", &Object::Boolean(false)),
+        ];
+
+        for (input, expected) in tests {
+            let mut evaluator = Evaluator::new(input);
+            let result = &evaluator.eval_program().unwrap()[0];
+            assert_eq!(result, expected);
+        }
     }
 }
