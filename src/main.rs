@@ -1,21 +1,16 @@
 use std::error::Error;
 
-use jerboa::parser::Parser;
+use jerboa::evaluator::Evaluator;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let a = fn(arg) {
-            let bar = 2;
-
-            return fn(foo) {
-                bar
-            };
-        };
+        5;
+        3;
     "#;
 
-    let mut parser = Parser::new(&input);
-    let res = parser.parse_program()?;
-    println!("{res}");
+    let mut evaluator = Evaluator::new(&input);
+    let res = evaluator.eval_program()?;
+    println!("{res:#?}");
 
     Ok(())
 }

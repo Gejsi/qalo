@@ -1,38 +1,36 @@
-// TODO: i don't really like this approach of handling objects.
+use thiserror::Error;
+
+use crate::ast::ParserError;
 
 #[derive(Debug)]
-pub enum ObjectKind {
-    Integer,
-    Boolean,
+pub enum Object {
+    Integer(i32),
+    Boolean(bool),
 }
 
-trait Object {
-    fn kind(&self) -> ObjectKind;
-    fn inspect(&self) -> String;
-}
+#[derive(Error, Debug)]
+pub enum EvalError {
+    #[error("Variable not found: {0}")]
+    VariableNotFound(String),
 
-#[derive(Debug)]
-pub struct Integer(pub i32);
+    #[error("Type mismatch: {0}")]
+    TypeMismatch(String),
 
-impl Object for Integer {
-    fn kind(&self) -> ObjectKind {
-        ObjectKind::Integer
-    }
+    #[error("Division by zero")]
+    DivisionByZero,
 
-    fn inspect(&self) -> String {
-        self.0.to_string()
-    }
-}
+    #[error("Function not found: {0}")]
+    FunctionNotFound(String),
 
-#[derive(Debug)]
-pub struct Boolean(pub bool);
+    #[error("Function call with the wrong number of arguments: {0}")]
+    FunctionCallWrongArity(String),
 
-impl Object for Boolean {
-    fn kind(&self) -> ObjectKind {
-        ObjectKind::Boolean
-    }
+    #[error("Return statement used outside a function")]
+    ReturnOutsideFunction,
 
-    fn inspect(&self) -> String {
-        self.0.to_string()
-    }
+    #[error("Parsing error: {0}")]
+    ParsingError(#[from] ParserError),
+
+    #[error("Unknown evaluation error")]
+    Unknown,
 }
