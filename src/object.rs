@@ -1,7 +1,8 @@
 use thiserror::Error;
 
-use crate::ast::ParserError;
+use crate::{ast::ParserError, token::TokenKind};
 
+// TODO: implement Display trait
 #[derive(Debug)]
 pub enum Object {
     Integer(i32),
@@ -27,6 +28,9 @@ pub enum EvalError {
 
     #[error("Return statement used outside a function")]
     ReturnOutsideFunction,
+
+    #[error("Unsupported operator: {0}")]
+    UnsupportedOperator(TokenKind),
 
     #[error("Parsing error: {0}")]
     ParsingError(#[from] ParserError),

@@ -2,6 +2,7 @@ use crate::{
     ast::{Expression, Statement},
     object::{EvalError, Object},
     parser::Parser,
+    token::TokenKind,
 };
 
 #[derive(Debug)]
@@ -40,14 +41,44 @@ impl<'a> Evaluator<'a> {
         let obj = match expr {
             Expression::Identifier(_) => todo!(),
             Expression::IntegerLiteral(lit) => Object::Integer(lit),
-            Expression::BooleanLiteral(_) => todo!(),
+            Expression::BooleanLiteral(lit) => Object::Boolean(lit),
             Expression::BinaryExpression {
                 left,
                 operator,
                 right,
-            } => todo!(),
+            } => {
+                let left_eval = self.eval_expression(*left)?;
+                let right_eval = self.eval_expression(*right)?;
+
+                match (left_eval, right_eval) {
+                    (Object::Integer(left_value), Object::Integer(right_value)) => match operator {
+                        TokenKind::Plus => Object::Integer(left_value + right_value),
+                        TokenKind::Minus => Object::Integer(left_value - right_value),
+                        TokenKind::Asterisk => Object::Integer(left_value * right_value),
+                        TokenKind::Slash => Object::Integer(left_value / right_value),
+                        TokenKind::Equal => Object::Boolean(left_value == right_value),
+                        TokenKind::NotEqual => Object::Boolean(left_value != right_value),
+                        TokenKind::LessThan => Object::Boolean(left_value < right_value),
+                        TokenKind::GreaterThan => Object::Boolean(left_value > right_value),
+                        TokenKind::LessThanEqual => Object::Boolean(left_value <= right_value),
+                        TokenKind::GreaterThanEqual => Object::Boolean(left_value >= right_value),
+                        _ => return Err(EvalError::UnsupportedOperator(operator)),
+                    },
+                    (Object::Boolean(left_value), Object::Boolean(right_value)) => match operator {
+                        TokenKind::Equal => Object::Boolean(left_value == right_value),
+                        TokenKind::NotEqual => Object::Boolean(left_value != right_value),
+                        _ => return Err(EvalError::UnsupportedOperator(operator)),
+                    },
+                    (left_value, right_value) => {
+                        return Err(EvalError::TypeMismatch(format!(
+                            "Cannot perform operation between {:?} and {:?}",
+                            left_value, right_value
+                        )))
+                    }
+                }
+            }
             Expression::UnaryExpression { operator, value } => todo!(),
-            Expression::GroupedExpression(_) => todo!(),
+            Expression::GroupedExpression(expr) => todo!(),
             Expression::CallExpression { path, arguments } => todo!(),
             Expression::IfExpression {
                 condition,
