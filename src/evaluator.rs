@@ -46,52 +46,10 @@ impl<'a> Evaluator<'a> {
                 left,
                 operator,
                 right,
-            } => {
-                let left_eval = self.eval_expression(*left)?;
-                let right_eval = self.eval_expression(*right)?;
-
-                match (left_eval, right_eval) {
-                    (Object::Integer(left_value), Object::Integer(right_value)) => match operator {
-                        TokenKind::Plus => Object::Integer(left_value + right_value),
-                        TokenKind::Minus => Object::Integer(left_value - right_value),
-                        TokenKind::Asterisk => Object::Integer(left_value * right_value),
-                        TokenKind::Equal => Object::Boolean(left_value == right_value),
-                        TokenKind::NotEqual => Object::Boolean(left_value != right_value),
-                        TokenKind::LessThan => Object::Boolean(left_value < right_value),
-                        TokenKind::GreaterThan => Object::Boolean(left_value > right_value),
-                        TokenKind::LessThanEqual => Object::Boolean(left_value <= right_value),
-                        TokenKind::GreaterThanEqual => Object::Boolean(left_value >= right_value),
-                        TokenKind::Modulus => {
-                            if right_value == 0 {
-                                return Err(EvalError::ModulusByZero);
-                            } else {
-                                Object::Integer(left_value % right_value)
-                            }
-                        }
-                        TokenKind::Slash => {
-                            if right_value == 0 {
-                                return Err(EvalError::DivisionByZero);
-                            } else {
-                                Object::Integer(left_value / right_value)
-                            }
-                        }
-                        _ => return Err(EvalError::UnsupportedOperator(operator)),
-                    },
-
-                    (Object::Boolean(left_value), Object::Boolean(right_value)) => match operator {
-                        TokenKind::Equal => Object::Boolean(left_value == right_value),
-                        TokenKind::NotEqual => Object::Boolean(left_value != right_value),
-                        _ => return Err(EvalError::UnsupportedOperator(operator)),
-                    },
-
-                    (left_value, right_value) => {
-                        return Err(EvalError::TypeMismatch(format!(
-                            "Cannot perform operation between {left_value} and {right_value}",
-                        )))
-                    }
-                }
+            } => self.eval_binary_expression(left, operator, right)?,
+            Expression::UnaryExpression { operator, value } => {
+                self.eval_unary_expression(operator, value)?
             }
-            Expression::UnaryExpression { operator, value } => todo!(),
             Expression::GroupedExpression(expr) => todo!(),
             Expression::CallExpression { path, arguments } => todo!(),
             Expression::IfExpression {
@@ -101,6 +59,93 @@ impl<'a> Evaluator<'a> {
             } => todo!(),
             Expression::FunctionExpression { parameters, body } => todo!(),
             Expression::Empty => return Err(EvalError::Unknown),
+        };
+
+        Ok(obj)
+    }
+
+    fn eval_binary_expression(
+        &mut self,
+        left: Box<Expression>,
+        operator: TokenKind,
+        right: Box<Expression>,
+    ) -> Result<Object, EvalError> {
+        let left_eval = self.eval_expression(*left)?;
+        let right_eval = self.eval_expression(*right)?;
+
+        let obj = match (left_eval, right_eval) {
+            (Object::Integer(left_value), Object::Integer(right_value)) => match operator {
+                TokenKind::Plus => Object::Integer(left_value + right_value),
+                TokenKind::Minus => Object::Integer(left_value - right_value),
+                TokenKind::Asterisk => Object::Integer(left_value * right_value),
+                TokenKind::Equal => Object::Boolean(left_value == right_value),
+                TokenKind::NotEqual => Object::Boolean(left_value != right_value),
+                TokenKind::LessThan => Object::Boolean(left_value < right_value),
+                TokenKind::GreaterThan => Object::Boolean(left_value > right_value),
+                TokenKind::LessThanEqual => Object::Boolean(left_value <= right_value),
+                TokenKind::GreaterThanEqual => Object::Boolean(left_value >= right_value),
+                TokenKind::Modulus => {
+                    if right_value == 0 {
+                        return Err(EvalError::ModulusByZero);
+                    } else {
+                        Object::Integer(left_value % right_value)
+                    }
+                }
+                TokenKind::Slash => {
+                    if right_value == 0 {
+                        return Err(EvalError::DivisionByZero);
+                    } else {
+                        Object::Integer(left_value / right_value)
+                    }
+                }
+                _ => return Err(EvalError::UnsupportedOperator(operator)),
+            },
+
+            (Object::Boolean(left_value), Object::Boolean(right_value)) => match operator {
+                TokenKind::Equal => Object::Boolean(left_value == right_value),
+                TokenKind::NotEqual => Object::Boolean(left_value != right_value),
+                _ => return Err(EvalError::UnsupportedOperator(operator)),
+            },
+
+            (left_value, right_value) => {
+                return Err(EvalError::TypeMismatch(format!(
+                    "Cannot perform operation between {left_value} and {right_value}",
+                )))
+            }
+        };
+
+        Ok(obj)
+    }
+
+    fn eval_unary_expression(
+        &mut self,
+        operator: TokenKind,
+        value: Box<Expression>,
+    ) -> Result<Object, EvalError> {
+        let obj = match operator {
+            TokenKind::Bang => match self.eval_expression(*value)? {
+                Object::Integer(lit) => {
+                    if lit == 0 {
+                        Object::Boolean(true)
+                    } else {
+                        Object::Boolean(false)
+                    }
+                }
+                Object::Boolean(lit) => {
+                    if lit == true {
+                        Object::Boolean(false)
+                    } else {
+                        Object::Boolean(true)
+                    }
+                }
+            },
+
+            TokenKind::Minus => match self.eval_expression(*value)? {
+                Object::Integer(lit) => Object::Integer(-lit),
+                _ => return Err(EvalError::UnsupportedOperator(operator)),
+            },
+
+            _ => return Err(EvalError::UnsupportedOperator(operator)),
         };
 
         Ok(obj)
@@ -137,6 +182,7 @@ mod tests {
             true == true;
             false != true;
         "#;
+
         let mut evaluator = Evaluator::new(&input);
         evaluator.eval_program().unwrap();
     }
