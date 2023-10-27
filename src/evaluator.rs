@@ -55,13 +55,19 @@ impl<'a> Evaluator<'a> {
                         TokenKind::Plus => Object::Integer(left_value + right_value),
                         TokenKind::Minus => Object::Integer(left_value - right_value),
                         TokenKind::Asterisk => Object::Integer(left_value * right_value),
-                        TokenKind::Slash => Object::Integer(left_value / right_value),
                         TokenKind::Equal => Object::Boolean(left_value == right_value),
                         TokenKind::NotEqual => Object::Boolean(left_value != right_value),
                         TokenKind::LessThan => Object::Boolean(left_value < right_value),
                         TokenKind::GreaterThan => Object::Boolean(left_value > right_value),
                         TokenKind::LessThanEqual => Object::Boolean(left_value <= right_value),
                         TokenKind::GreaterThanEqual => Object::Boolean(left_value >= right_value),
+                        TokenKind::Slash => {
+                            if right_value == 0 {
+                                return Err(EvalError::DivisionByZero);
+                            } else {
+                                Object::Integer(left_value / right_value)
+                            }
+                        }
                         _ => return Err(EvalError::UnsupportedOperator(operator)),
                     },
                     (Object::Boolean(left_value), Object::Boolean(right_value)) => match operator {
