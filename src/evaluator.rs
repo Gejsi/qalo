@@ -25,14 +25,17 @@ impl<'a> Evaluator<'a> {
         let mut objects: Vec<Object> = vec![];
 
         for statement in program.0 {
-            objects.push(self.eval_statement(statement)?);
+            if let Some(eval_statement) = self.eval_statement(statement)? {
+                objects.push(eval_statement);
+            }
         }
 
         Ok(objects)
     }
 
-    fn eval_statement(&mut self, statement: Statement) -> Result<Object, EvalError> {
-        match statement {
+    // Most statements aren't evaluated, only *expression statements* are.
+    fn eval_statement(&mut self, statement: Statement) -> Result<Option<Object>, EvalError> {
+        let try_obj = match statement {
             Statement::VarStatement {
                 kind: _, // TODO: support different types of var statements
                 name,
@@ -40,13 +43,14 @@ impl<'a> Evaluator<'a> {
             } => {
                 let obj = self.eval_expression(value)?;
                 self.env.set(name, obj);
-                // FIX: don't return anything
-                Ok(Object::Integer(1000))
+                None
             }
             Statement::ReturnStatement(expr) => todo!(),
-            Statement::ExpressionStatement(expr) => self.eval_expression(expr),
+            Statement::ExpressionStatement(expr) => Some(self.eval_expression(expr)?),
             Statement::BlockStatement(statements) => todo!(),
-        }
+        };
+
+        Ok(try_obj)
     }
 
     fn eval_expression(&mut self, expr: Expression) -> Result<Object, EvalError> {
