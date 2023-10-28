@@ -50,7 +50,7 @@ impl<'a> Evaluator<'a> {
             Expression::UnaryExpression { operator, value } => {
                 self.eval_unary_expression(operator, value)?
             }
-            Expression::GroupedExpression(expr) => todo!(),
+            Expression::GroupedExpression(expr) => self.eval_expression(*expr)?,
             Expression::CallExpression { path, arguments } => todo!(),
             Expression::IfExpression {
                 condition,
@@ -109,8 +109,8 @@ impl<'a> Evaluator<'a> {
 
             (left_value, right_value) => {
                 return Err(EvalError::TypeMismatch(format!(
-                    "Cannot perform operation between {left_value} and {right_value}",
-                )))
+                "Cannot perform operation '{operator}' between '{left_value}' and '{right_value}'",
+            )))
             }
         };
 
@@ -188,10 +188,10 @@ mod tests {
             ("true == false", false),
             ("true != false", true),
             ("false != true", true),
-            // ("(1 < 2) == true", true),
-            // ("(1 < 2) == false", false),
-            // ("(1 > 2) == true", false),
-            // ("(1 > 2) == false", true),
+            ("(1 < 2) == true", true),
+            ("(1 < 2) == false", false),
+            ("(1 > 2) == true", false),
+            ("(1 > 2) == false", true),
         ];
 
         for (input, expected) in tests {
