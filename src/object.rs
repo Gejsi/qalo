@@ -4,7 +4,7 @@ use thiserror::Error;
 
 use crate::{ast::ParserError, token::TokenKind};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Object {
     Integer(i32),
     Boolean(bool),

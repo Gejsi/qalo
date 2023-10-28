@@ -261,7 +261,11 @@ impl<'a> Parser<'a> {
     pub fn parse_grouped_expression(&mut self) -> Result<Expression, ParserError> {
         self.eat_token();
         let expr = match self.cur.kind {
-            TokenKind::RightParen => Expression::Empty,
+            TokenKind::RightParen => {
+                return Err(ParserError::SyntaxError(
+                    "Empty grouped expression '()' isn't allowed".to_string(),
+                ))
+            }
             _ => {
                 let subexpr = self.parse_expression(0, true)?;
                 self.expect_token(TokenKind::RightParen)?;

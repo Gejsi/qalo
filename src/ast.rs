@@ -86,8 +86,6 @@ pub enum Expression {
         parameters: Vec<String>,
         body: Box<Statement>,
     },
-
-    Empty,
 }
 
 impl fmt::Display for Expression {
@@ -143,8 +141,6 @@ impl fmt::Display for Expression {
                 }
                 write!(f, ") {}", body)
             }
-
-            Expression::Empty => write!(f, ""),
         }
     }
 }

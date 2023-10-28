@@ -1,5 +1,6 @@
 use crate::{
     ast::{Expression, Statement},
+    environment::Environment,
     object::{EvalError, Object},
     parser::Parser,
     token::TokenKind,
@@ -8,13 +9,15 @@ use crate::{
 #[derive(Debug)]
 pub struct Evaluator<'a> {
     parser: Parser<'a>,
+    env: Environment,
 }
 
 impl<'a> Evaluator<'a> {
     pub fn new(input: &'a str) -> Self {
         let parser = Parser::new(&input);
+        let env = Environment::new();
 
-        Evaluator { parser }
+        Evaluator { parser, env }
     }
 
     pub fn eval_program(&mut self) -> Result<Vec<Object>, EvalError> {
@@ -30,7 +33,16 @@ impl<'a> Evaluator<'a> {
 
     fn eval_statement(&mut self, statement: Statement) -> Result<Object, EvalError> {
         match statement {
-            Statement::VarStatement { kind, name, value } => todo!(),
+            Statement::VarStatement {
+                kind: _, // TODO: support different types of var statements
+                name,
+                value,
+            } => {
+                let obj = self.eval_expression(value)?;
+                self.env.set(name, obj);
+                // FIX: don't return anything
+                Ok(Object::Integer(1000))
+            }
             Statement::ReturnStatement(expr) => todo!(),
             Statement::ExpressionStatement(expr) => self.eval_expression(expr),
             Statement::BlockStatement(statements) => todo!(),
@@ -39,9 +51,12 @@ impl<'a> Evaluator<'a> {
 
     fn eval_expression(&mut self, expr: Expression) -> Result<Object, EvalError> {
         let obj = match expr {
-            Expression::Identifier(_) => todo!(),
             Expression::IntegerLiteral(lit) => Object::Integer(lit),
             Expression::BooleanLiteral(lit) => Object::Boolean(lit),
+            Expression::Identifier(name) => match self.env.get(&name) {
+                Some(lit) => lit.clone(),
+                None => return Err(EvalError::VariableNotFound(name)),
+            },
             Expression::BinaryExpression {
                 left,
                 operator,
@@ -58,7 +73,6 @@ impl<'a> Evaluator<'a> {
                 alternative,
             } => todo!(),
             Expression::FunctionExpression { parameters, body } => todo!(),
-            Expression::Empty => return Err(EvalError::Unknown),
         };
 
         Ok(obj)
