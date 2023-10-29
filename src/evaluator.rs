@@ -1,3 +1,5 @@
+use std::{collections::HashMap, rc::Rc};
+
 use crate::{
     ast::{Expression, Statement},
     environment::Environment,
@@ -37,7 +39,7 @@ impl<'a> Evaluator<'a> {
     fn eval_statement(&mut self, statement: Statement) -> Result<Option<Object>, EvalError> {
         let try_obj = match statement {
             Statement::VarStatement {
-                kind: _, // TODO: support different types of var statements
+                kind: _,
                 name,
                 value,
             } => {
@@ -47,7 +49,23 @@ impl<'a> Evaluator<'a> {
             }
             Statement::ReturnStatement(expr) => todo!(),
             Statement::ExpressionStatement(expr) => Some(self.eval_expression(expr)?),
-            Statement::BlockStatement(statements) => todo!(),
+            Statement::BlockStatement(statements) => {
+                // Create a new environment linked to the current outer environment
+                let inner_env = Environment {
+                    store: HashMap::new(),
+                    outer: Some(self.env.clone().into()),
+                };
+
+                let outer_env = std::mem::replace(&mut self.env, inner_env);
+
+                for statement in statements {
+                    self.eval_statement(statement)?;
+                }
+
+                self.env = outer_env;
+
+                None
+            }
         };
 
         Ok(try_obj)
@@ -57,10 +75,7 @@ impl<'a> Evaluator<'a> {
         let obj = match expr {
             Expression::IntegerLiteral(lit) => Object::Integer(lit),
             Expression::BooleanLiteral(lit) => Object::Boolean(lit),
-            Expression::Identifier(name) => match self.env.get(&name) {
-                Some(lit) => lit.clone(),
-                None => return Err(EvalError::VariableNotFound(name)),
-            },
+            Expression::Identifier(name) => self.env.get(&name)?,
             Expression::BinaryExpression {
                 left,
                 operator,
@@ -156,6 +171,7 @@ impl<'a> Evaluator<'a> {
                         Object::Boolean(true)
                     }
                 }
+                _ => return Err(EvalError::UnsupportedOperator(operator)),
             },
 
             TokenKind::Minus => match self.eval_expression(*value)? {

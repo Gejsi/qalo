@@ -18,6 +18,7 @@ impl fmt::Display for Program {
 
 #[derive(Debug)]
 pub enum Statement {
+    // TODO: support different types of var statements
     VarStatement {
         kind: TokenKind,
         name: String,

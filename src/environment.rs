@@ -1,11 +1,11 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
-use crate::object::Object;
+use crate::object::{EvalError, Object};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Environment {
-    pub store: HashMap<String, Object>, // Object represents the evaluated values
-    pub outer: Option<Box<Environment>>,
+    pub store: HashMap<String, Object>,
+    pub outer: Option<Rc<Environment>>,
 }
 
 impl Environment {
@@ -16,8 +16,17 @@ impl Environment {
         }
     }
 
-    pub fn get(&self, name: &str) -> Option<&Object> {
-        self.store.get(name)
+    pub fn get(&self, name: &str) -> Result<Object, EvalError> {
+        match self.store.get(name) {
+            Some(lit) => Ok(lit.clone()),
+            None => {
+                if let Some(outer) = &self.outer {
+                    Ok(outer.get(name)?)
+                } else {
+                    Err(EvalError::VariableNotFound(name.to_string()))
+                }
+            }
+        }
     }
 
     pub fn set(&mut self, name: String, value: Object) {

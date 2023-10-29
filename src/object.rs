@@ -8,6 +8,7 @@ use crate::{ast::ParserError, token::TokenKind};
 pub enum Object {
     Integer(i32),
     Boolean(bool),
+    Return(Box<Object>),
 }
 
 impl fmt::Display for Object {
@@ -15,6 +16,7 @@ impl fmt::Display for Object {
         match self {
             Object::Integer(value) => write!(f, "{}", value),
             Object::Boolean(value) => write!(f, "{}", value),
+            Object::Return(value) => value.fmt(f),
         }
     }
 }
