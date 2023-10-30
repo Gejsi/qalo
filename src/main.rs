@@ -8,7 +8,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             let b = 2;
             b + b;
         } else {
-            3
+            4
         };
 
         a;

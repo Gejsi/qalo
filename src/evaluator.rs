@@ -52,14 +52,13 @@ impl<'a> Evaluator<'a> {
                 // create a new environment linked to the current outer environment
                 let mut inner_env = Environment::new();
                 inner_env.outer = Some(self.env.clone());
-                // save the outer environment
                 let outer_env = std::mem::replace(&mut self.env, Rc::new(RefCell::new(inner_env)));
 
-                // save all evaluated objects
-                let mut objects: Vec<Object> = vec![];
+                // save last evaluated object
+                let mut obj: Option<Object> = None;
                 for statement in statements {
                     if let Some(statement) = self.eval_statement(statement)? {
-                        objects.push(statement);
+                        obj = Some(statement);
                     }
                 }
 
@@ -67,7 +66,7 @@ impl<'a> Evaluator<'a> {
                 self.env = outer_env;
 
                 // return the last evaluated object
-                Some(objects[objects.len() - 1].clone())
+                obj
             }
         };
 
@@ -94,7 +93,9 @@ impl<'a> Evaluator<'a> {
                 consequence,
                 alternative,
             } => self.eval_if_expression(condition, consequence, alternative)?,
-            Expression::FunctionExpression { parameters, body } => todo!(),
+            Expression::FunctionExpression { parameters, body } => {
+                self.eval_function_expression(parameters, body)?
+            }
         };
 
         Ok(obj)
@@ -200,6 +201,14 @@ impl<'a> Evaluator<'a> {
 
         obj.map_or(Ok(Object::Unit), Ok)
     }
+
+    fn eval_function_expression(
+        &mut self,
+        parameters: Vec<String>,
+        body: Box<Statement>,
+    ) -> Result<Object, EvalError> {
+        todo!()
+    }
 }
 
 #[cfg(test)]
@@ -245,7 +254,7 @@ mod tests {
         ];
 
         for (input, expected) in tests {
-            let mut evaluator = Evaluator::new(input);
+            let mut evaluator = Evaluator::new(&input);
             let result = &evaluator.eval_program().unwrap()[0];
 
             let expected_obj = match expected {
@@ -271,7 +280,7 @@ mod tests {
         ];
 
         for (input, expected) in tests {
-            let mut evaluator = Evaluator::new(input);
+            let mut evaluator = Evaluator::new(&input);
             let result = &evaluator.eval_program().unwrap()[0];
             assert_eq!(result, expected);
         }
@@ -291,7 +300,7 @@ mod tests {
         ];
 
         for (input, expected) in tests {
-            let mut evaluator = Evaluator::new(input);
+            let mut evaluator = Evaluator::new(&input);
             let result = &evaluator.eval_program().unwrap()[0];
             assert_eq!(result, expected);
         }
