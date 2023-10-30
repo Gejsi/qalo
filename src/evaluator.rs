@@ -308,28 +308,20 @@ mod tests {
 
     #[test]
     fn eval_if_expression() {
-        let input = r#"
-            let a = if 2 > 1 {
-                let b = 2;
-                b + b;
-            } else {
-                3
-            };
+        let tests = vec![
+            ("if true { 10 }", &Object::Integer(10)),
+            ("if false { 10 }", &Object::Unit),
+            ("if 1 < 2 { 10 }", &Object::Integer(10)),
+            ("if 1 > 2 { 10 }", &Object::Unit),
+            ("if 1 > 2 { 10 } else { 20 }", &Object::Integer(20)),
+            ("if 1 < 2 { 10 } else { 20 }", &Object::Integer(10)),
+        ];
 
-            a;
-
-            let b = if 2 > 5 {
-                2
-            } else {
-                3
-            };
-
-            b;
-        "#;
-        let mut evaluator = Evaluator::new(&input);
-        let objects = evaluator.eval_program().unwrap();
-        assert_eq!(objects[0], Object::Integer(4));
-        assert_eq!(objects[1], Object::Integer(3));
+        for (input, expected) in tests {
+            let mut evaluator = Evaluator::new(&input);
+            let result = &evaluator.eval_program().unwrap()[0];
+            assert_eq!(result, expected);
+        }
     }
 
     #[test]
