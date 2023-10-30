@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::object::{EvalError, Object};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Environment {
     pub store: HashMap<String, Object>,
     pub outer: Option<Rc<RefCell<Environment>>>,

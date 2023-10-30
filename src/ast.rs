@@ -16,7 +16,7 @@ impl fmt::Display for Program {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Statement {
     // TODO: support different types of var statements
     VarStatement {
@@ -51,7 +51,7 @@ impl fmt::Display for Statement {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Expression {
     Identifier(String),
 
@@ -146,7 +146,7 @@ impl fmt::Display for Expression {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct CallExpressionArgument {
     pub name: String,
     pub value: Expression,

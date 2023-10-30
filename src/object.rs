@@ -2,24 +2,43 @@ use std::fmt;
 
 use thiserror::Error;
 
-use crate::{ast::ParserError, token::TokenKind};
+use crate::{
+    ast::{ParserError, Statement},
+    environment::Environment,
+    token::TokenKind,
+};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Object {
     Integer(i32),
     Boolean(bool),
     Return(Box<Object>),
+    Function(Closure),
     Unit,
 }
 
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Object::Integer(value) => write!(f, "{}", value),
-            Object::Boolean(value) => write!(f, "{}", value),
+            Object::Integer(value) => write!(f, "{value}"),
+            Object::Boolean(value) => write!(f, "{value}"),
             Object::Return(value) => value.fmt(f),
+            Object::Function(value) => write!(f, "{value}"),
             Object::Unit => write!(f, "()"),
         }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Closure {
+    pub parameters: Vec<String>,
+    pub body: Statement,
+    pub env: Environment,
+}
+
+impl fmt::Display for Closure {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "fn({}) {{ {} }}", self.parameters.join(", "), self.body)
     }
 }
 
