@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     ast::{Expression, Statement},
@@ -11,13 +11,13 @@ use crate::{
 #[derive(Debug)]
 pub struct Evaluator<'a> {
     parser: Parser<'a>,
-    env: Environment,
+    env: Rc<RefCell<Environment>>,
 }
 
 impl<'a> Evaluator<'a> {
     pub fn new(input: &'a str) -> Self {
         let parser = Parser::new(&input);
-        let env = Environment::new();
+        let env = Rc::new(RefCell::new(Environment::new()));
 
         Evaluator { parser, env }
     }
@@ -44,19 +44,17 @@ impl<'a> Evaluator<'a> {
                 value,
             } => {
                 let obj = self.eval_expression(value)?;
-                self.env.set(name, obj);
+                self.env.borrow_mut().set(name, obj);
                 None
             }
-            Statement::ReturnStatement(expr) => todo!(),
+            Statement::ReturnStatement(expr) => None,
             Statement::ExpressionStatement(expr) => Some(self.eval_expression(expr)?),
             Statement::BlockStatement(statements) => {
                 // Create a new environment linked to the current outer environment
-                let inner_env = Environment {
-                    store: HashMap::new(),
-                    outer: Some(self.env.clone().into()),
-                };
+                let mut inner_env = Environment::new();
+                inner_env.outer = Some(self.env.clone());
 
-                let outer_env = std::mem::replace(&mut self.env, inner_env);
+                let outer_env = std::mem::replace(&mut self.env, Rc::new(RefCell::new(inner_env)));
 
                 for statement in statements {
                     self.eval_statement(statement)?;
@@ -75,7 +73,7 @@ impl<'a> Evaluator<'a> {
         let obj = match expr {
             Expression::IntegerLiteral(lit) => Object::Integer(lit),
             Expression::BooleanLiteral(lit) => Object::Boolean(lit),
-            Expression::Identifier(name) => self.env.get(&name)?,
+            Expression::Identifier(name) => self.env.borrow().get(&name)?,
             Expression::BinaryExpression {
                 left,
                 operator,
@@ -279,5 +277,25 @@ mod tests {
             let result = &evaluator.eval_program().unwrap()[0];
             assert_eq!(result, expected);
         }
+    }
+
+    #[test]
+    fn eval_block_statement() {
+        let input = r#"
+            let a = 2;
+
+            {
+                let b = 3;
+                b;
+
+                {
+                    a;
+                }
+            }
+
+            a;
+        "#;
+        let mut evaluator = Evaluator::new(&input);
+        evaluator.eval_program().unwrap();
     }
 }

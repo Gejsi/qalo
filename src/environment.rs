@@ -1,11 +1,11 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::object::{EvalError, Object};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Environment {
     pub store: HashMap<String, Object>,
-    pub outer: Option<Rc<Environment>>,
+    pub outer: Option<Rc<RefCell<Environment>>>,
 }
 
 impl Environment {
@@ -17,15 +17,12 @@ impl Environment {
     }
 
     pub fn get(&self, name: &str) -> Result<Object, EvalError> {
-        match self.store.get(name) {
-            Some(lit) => Ok(lit.clone()),
-            None => {
-                if let Some(outer) = &self.outer {
-                    Ok(outer.get(name)?)
-                } else {
-                    Err(EvalError::VariableNotFound(name.to_string()))
-                }
-            }
+        if let Some(lit) = self.store.get(name) {
+            Ok(lit.clone())
+        } else if let Some(outer) = &self.outer {
+            Ok(outer.borrow().get(name)?)
+        } else {
+            Err(EvalError::VariableNotFound(name.to_string()))
         }
     }
 

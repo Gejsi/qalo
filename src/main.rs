@@ -14,6 +14,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                 a;
             }
         }
+
+        a;
     "#;
 
     let mut evaluator = Evaluator::new(&input);
