@@ -35,7 +35,6 @@ impl<'a> Evaluator<'a> {
         Ok(objects)
     }
 
-    // Most statements aren't evaluated, only *expression statements* are.
     fn eval_statement(&mut self, statement: Statement) -> Result<Option<Object>, EvalError> {
         let try_obj = match statement {
             Statement::VarStatement {
@@ -50,19 +49,25 @@ impl<'a> Evaluator<'a> {
             Statement::ReturnStatement(expr) => None,
             Statement::ExpressionStatement(expr) => Some(self.eval_expression(expr)?),
             Statement::BlockStatement(statements) => {
-                // Create a new environment linked to the current outer environment
+                // create a new environment linked to the current outer environment
                 let mut inner_env = Environment::new();
                 inner_env.outer = Some(self.env.clone());
-
+                // save the outer environment
                 let outer_env = std::mem::replace(&mut self.env, Rc::new(RefCell::new(inner_env)));
 
+                // save all evaluated objects
+                let mut objects: Vec<Object> = vec![];
                 for statement in statements {
-                    self.eval_statement(statement)?;
+                    if let Some(statement) = self.eval_statement(statement)? {
+                        objects.push(statement);
+                    }
                 }
 
+                // go back to the outer environment
                 self.env = outer_env;
 
-                None
+                // return the last evaluated object
+                Some(objects[objects.len() - 1].clone())
             }
         };
 
@@ -88,7 +93,7 @@ impl<'a> Evaluator<'a> {
                 condition,
                 consequence,
                 alternative,
-            } => todo!(),
+            } => self.eval_if_expression(condition, consequence, alternative)?,
             Expression::FunctionExpression { parameters, body } => todo!(),
         };
 
@@ -155,20 +160,8 @@ impl<'a> Evaluator<'a> {
     ) -> Result<Object, EvalError> {
         let obj = match operator {
             TokenKind::Bang => match self.eval_expression(*value)? {
-                Object::Integer(lit) => {
-                    if lit == 0 {
-                        Object::Boolean(true)
-                    } else {
-                        Object::Boolean(false)
-                    }
-                }
-                Object::Boolean(lit) => {
-                    if lit == true {
-                        Object::Boolean(false)
-                    } else {
-                        Object::Boolean(true)
-                    }
-                }
+                Object::Integer(lit) => Object::Integer(!lit),
+                Object::Boolean(lit) => Object::Boolean(!lit),
                 _ => return Err(EvalError::UnsupportedOperator(operator)),
             },
 
@@ -181,6 +174,31 @@ impl<'a> Evaluator<'a> {
         };
 
         Ok(obj)
+    }
+
+    fn eval_if_expression(
+        &mut self,
+        condition: Box<Expression>,
+        consequence: Box<Statement>,
+        alternative: Option<Box<Statement>>,
+    ) -> Result<Object, EvalError> {
+        let obj = match self.eval_expression(*condition)? {
+            Object::Boolean(true) => self.eval_statement(*consequence)?,
+            Object::Boolean(false) => {
+                if let Some(alt) = alternative {
+                    self.eval_statement(*alt)?
+                } else {
+                    Some(Object::Unit)
+                }
+            }
+            _ => {
+                return Err(EvalError::TypeMismatch(
+                    "Condition must be a boolean".to_string(),
+                ))
+            }
+        };
+
+        obj.map_or(Ok(Object::Unit), Ok)
     }
 }
 
@@ -265,9 +283,9 @@ mod tests {
             ("-2", &Object::Integer(-2)),
             ("!true", &Object::Boolean(false)),
             ("!false", &Object::Boolean(true)),
-            ("!5", &Object::Boolean(false)),
-            ("!!5", &Object::Boolean(true)),
-            ("!0", &Object::Boolean(true)),
+            ("!5", &Object::Integer(-6)),
+            ("!!5", &Object::Integer(5)),
+            ("!0", &Object::Integer(-1)),
             ("!!true", &Object::Boolean(true)),
             ("!!false", &Object::Boolean(false)),
         ];
@@ -277,6 +295,32 @@ mod tests {
             let result = &evaluator.eval_program().unwrap()[0];
             assert_eq!(result, expected);
         }
+    }
+
+    #[test]
+    fn eval_if_expression() {
+        let input = r#"
+            let a = if 2 > 1 {
+                let b = 2;
+                b + b;
+            } else {
+                3
+            };
+
+            a;
+
+            let b = if 2 > 5 {
+                2
+            } else {
+                3
+            };
+
+            b;
+        "#;
+        let mut evaluator = Evaluator::new(&input);
+        let objects = evaluator.eval_program().unwrap();
+        assert_eq!(objects[0], Object::Integer(4));
+        assert_eq!(objects[1], Object::Integer(3));
     }
 
     #[test]

@@ -27,6 +27,6 @@ impl Environment {
     }
 
     pub fn set(&mut self, name: String, value: Object) {
-        self.store.insert(name.to_string(), value);
+        self.store.insert(name, value);
     }
 }

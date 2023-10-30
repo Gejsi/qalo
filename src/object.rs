@@ -9,6 +9,7 @@ pub enum Object {
     Integer(i32),
     Boolean(bool),
     Return(Box<Object>),
+    Unit,
 }
 
 impl fmt::Display for Object {
@@ -17,6 +18,7 @@ impl fmt::Display for Object {
             Object::Integer(value) => write!(f, "{}", value),
             Object::Boolean(value) => write!(f, "{}", value),
             Object::Return(value) => value.fmt(f),
+            Object::Unit => write!(f, "()"),
         }
     }
 }

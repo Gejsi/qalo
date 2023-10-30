@@ -4,16 +4,12 @@ use jerboa::evaluator::Evaluator;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let a = 2;
-
-        {
-            let b = 3;
-            b;
-
-            {
-                a;
-            }
-        }
+        let a = if 2 > 5 {
+            let b = 2;
+            b + b;
+        } else {
+            3
+        };
 
         a;
     "#;
