@@ -330,8 +330,12 @@ impl<'a> Parser<'a> {
 
             if self.next.kind == TokenKind::Comma {
                 self.eat_token();
-            } else if self.next.kind != TokenKind::RightParen {
-                return Err(ParserError::UnexpectedToken(self.next.clone()));
+
+                // error in case where a comma isn't followed by another expression
+                // e.g. `fn(1, 2, )`
+                if self.next.kind == TokenKind::RightParen {
+                    return Err(ParserError::UnexpectedToken(self.cur.clone()));
+                }
             }
         }
 
