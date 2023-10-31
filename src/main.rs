@@ -1,20 +1,15 @@
 use std::error::Error;
 
-use jerboa::evaluator::Evaluator;
+use jerboa::{evaluator::Evaluator, parser::Parser};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let a = 2;
-        let b = 3;
-
-        let c = a + b + 1;
-        c;
+        identity((b * c));
     "#;
 
-    let mut evaluator = Evaluator::new(&input);
-    for obj in evaluator.eval_program()? {
-        println!("{obj}");
-    }
+    let mut parser = Parser::new(&input);
+    let res = parser.parse_program()?;
+    println!("{res}");
 
     Ok(())
 }

@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{cell::RefCell, fmt, rc::Rc};
 
 use thiserror::Error;
 
@@ -33,19 +33,19 @@ impl fmt::Display for Object {
 pub struct Closure {
     pub parameters: Vec<String>,
     pub body: Statement,
-    pub env: Environment,
+    pub env: Rc<RefCell<Environment>>,
 }
 
 impl fmt::Display for Closure {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "fn({}) {{ {} }}", self.parameters.join(", "), self.body)
+        write!(f, "fn({}) {}", self.parameters.join(", "), self.body)
     }
 }
 
 #[derive(Error, Debug)]
 pub enum EvalError {
-    #[error("Variable not found: {0}")]
-    VariableNotFound(String),
+    #[error("Identifier not found: {0}")]
+    IdentifierNotFound(String),
 
     #[error("Type mismatch: {0}")]
     TypeMismatch(String),
@@ -59,8 +59,8 @@ pub enum EvalError {
     #[error("Function not found: {0}")]
     FunctionNotFound(String),
 
-    #[error("Function call with the wrong number of arguments: {0}")]
-    FunctionCallWrongArity(String),
+    #[error("Function call with the wrong number of arguments. Expected {0}, got {1}")]
+    FunctionCallWrongArity(usize, usize),
 
     #[error("Return statement used outside a function")]
     ReturnOutsideFunction,

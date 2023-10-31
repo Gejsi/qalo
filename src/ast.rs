@@ -74,7 +74,7 @@ pub enum Expression {
 
     CallExpression {
         path: String,
-        arguments: Vec<CallExpressionArgument>,
+        arguments: Vec<Expression>,
     },
 
     IfExpression {
@@ -143,18 +143,6 @@ impl fmt::Display for Expression {
                 write!(f, ") {}", body)
             }
         }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct CallExpressionArgument {
-    pub name: String,
-    pub value: Expression,
-}
-
-impl fmt::Display for CallExpressionArgument {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}: {}", self.name, self.value)
     }
 }
 

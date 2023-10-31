@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use crate::{
     ast::{Expression, Statement},
     environment::Environment,
-    object::{EvalError, Object},
+    object::{Closure, EvalError, Object},
     parser::Parser,
     token::TokenKind,
 };
@@ -87,7 +87,9 @@ impl<'a> Evaluator<'a> {
                 self.eval_unary_expression(operator, value)?
             }
             Expression::GroupedExpression(expr) => self.eval_expression(*expr)?,
-            Expression::CallExpression { path, arguments } => todo!(),
+            Expression::CallExpression { path, arguments } => {
+                self.eval_call_expression(path, arguments)?
+            }
             Expression::IfExpression {
                 condition,
                 consequence,
@@ -207,7 +209,46 @@ impl<'a> Evaluator<'a> {
         parameters: Vec<String>,
         body: Box<Statement>,
     ) -> Result<Object, EvalError> {
-        todo!()
+        let closure = Closure {
+            parameters,
+            body: *body,
+            env: self.env.clone(),
+        };
+
+        Ok(Object::Function(closure))
+    }
+
+    fn eval_call_expression(
+        &mut self,
+        path: String,
+        arguments: Vec<Expression>,
+    ) -> Result<Object, EvalError> {
+        let function = self.env.borrow().get(&path)?;
+
+        let obj = match function {
+            Object::Function(Closure {
+                parameters,
+                body,
+                env,
+            }) => {
+                if parameters.len() != arguments.len() {
+                    return Err(EvalError::FunctionCallWrongArity(
+                        parameters.len(),
+                        arguments.len(),
+                    ));
+                }
+
+                Object::Unit
+            }
+
+            _ => {
+                return Err(EvalError::FunctionNotFound(
+                    "Check if this identifier is a declared function".to_string(),
+                ))
+            }
+        };
+
+        Ok(obj)
     }
 }
 

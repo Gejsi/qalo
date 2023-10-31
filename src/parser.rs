@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    ast::{CallExpressionArgument, Expression, ParserError, Program, Statement},
+    ast::{Expression, ParserError, Program, Statement},
     lexer::Lexer,
     token::{Token, TokenKind},
 };
@@ -240,17 +240,25 @@ impl<'a> Parser<'a> {
 
     pub fn parse_call_expression(&mut self) -> Result<Expression, ParserError> {
         let path = self.cur.literal.clone();
-        self.eat_token();
+        self.expect_token(TokenKind::LeftParen)?;
 
-        let mut arguments: Vec<CallExpressionArgument> = vec![];
+        let mut arguments: Vec<Expression> = vec![];
         while self.next.kind != TokenKind::RightParen {
-            let name = self.expect_token(TokenKind::Identifier)?.literal.clone();
-            self.expect_token(TokenKind::Colon)?;
             let value = self.parse_expression(0, false)?;
-            arguments.push(CallExpressionArgument { name, value });
+            arguments.push(value);
 
             if self.next.kind == TokenKind::Comma {
                 self.eat_token();
+
+                // error in case where a comma isn't followed by another expression
+                // e.g. `foo(1, 2, )`
+                if self.next.kind == TokenKind::RightParen {
+                    return Err(ParserError::UnexpectedToken(self.cur.clone()));
+                }
+            } else if self.next.kind != TokenKind::RightParen {
+                return Err(ParserError::SyntaxError(
+                    "Expected comma between arguments".to_string(),
+                ));
             }
         }
 
@@ -427,17 +435,14 @@ mod tests {
             ("2 / (5 + 5)", "(2 / (5 + 5))"),
             ("-(5 + 5)", "(-(5 + 5))"),
             ("!(true == true)", "(!(true == true))"),
+            ("a + add(b * c) + d", "((a + add((b * c))) + d)"),
             (
-                "a + add(first: b * c) + d",
-                "((a + add(first: (b * c))) + d)",
+                "add(1, 2 * 3, sum(6, 7 * 8))",
+                "add(1, (2 * 3), sum(6, (7 * 8)))",
             ),
             (
-                "add(a: 1, b: 2 * 3, c: sum(first: 6, second: 7 * 8))",
-                "add(a: 1, b: (2 * 3), c: sum(first: 6, second: (7 * 8)))",
-            ),
-            (
-                "add(first: a + b + c * d / f + g)",
-                "add(first: (((a + b) + ((c * d) / f)) + g))",
+                "add(a + b + c * d / f + g)",
+                "add((((a + b) + ((c * d) / f)) + g))",
             ),
             // (
             //     "a * [1, 2, 3, 4][b * c] * d",
