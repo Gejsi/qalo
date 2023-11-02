@@ -17,8 +17,8 @@ impl Environment {
     }
 
     pub fn get(&self, name: &str) -> Result<Object, EvalError> {
-        if let Some(lit) = self.store.get(name) {
-            Ok(lit.clone())
+        if let Some(obj) = self.store.get(name) {
+            Ok(obj.clone())
         } else if let Some(outer) = &self.outer {
             Ok(outer.borrow().get(name)?)
         } else {

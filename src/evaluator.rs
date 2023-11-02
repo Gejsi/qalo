@@ -44,6 +44,7 @@ impl<'a> Evaluator<'a> {
             } => {
                 let obj = self.eval_expression(value)?;
                 self.env.borrow_mut().set(name, obj);
+
                 None
             }
             Statement::ReturnStatement(expr) => {
@@ -60,11 +61,8 @@ impl<'a> Evaluator<'a> {
                     obj = self.eval_statement(statement)?;
 
                     // if the current object is a `return` value, stop evaluating this block.
-                    if let Some(obj) = &obj {
-                        match obj {
-                            Object::ReturnValue(_) => break,
-                            _ => continue,
-                        }
+                    if let Some(Object::ReturnValue(_)) = obj {
+                        break;
                     }
                 }
 
@@ -106,7 +104,11 @@ impl<'a> Evaluator<'a> {
             }
         };
 
-        Ok(obj)
+        if let Object::ReturnValue(inner_obj) = obj {
+            Ok(*inner_obj)
+        } else {
+            Ok(obj)
+        }
     }
 
     fn eval_binary_expression(

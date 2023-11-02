@@ -4,13 +4,13 @@ use jerboa::evaluator::Evaluator;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let foo = fn(x) {
+        let foo = fn() {
             let double = fn(y) { y * 2; };
-            return x;
-            1;
+            return double;
         };
 
-        let bar = foo(3);
+        let doubler = foo();
+        let bar = doubler(2);
         bar;
     "#;
 
