@@ -164,7 +164,7 @@ impl<'a> Lexer<'a> {
                 literal: "*".to_string(),
             },
             '%' => Token {
-                kind: TokenKind::Modulus,
+                kind: TokenKind::Percentage,
                 literal: "%".to_string(),
             },
             '(' => Token {

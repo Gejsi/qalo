@@ -143,7 +143,7 @@ impl<'a> Parser<'a> {
 
             TokenKind::Plus | TokenKind::Minus => Some(Precedence::Infix(5, 6)),
 
-            TokenKind::Asterisk | TokenKind::Slash | TokenKind::Modulus => {
+            TokenKind::Asterisk | TokenKind::Slash | TokenKind::Percentage => {
                 Some(Precedence::Infix(6, 7))
             }
 
@@ -214,7 +214,7 @@ impl<'a> Parser<'a> {
                 | TokenKind::Minus
                 | TokenKind::Slash
                 | TokenKind::Asterisk
-                | TokenKind::Modulus
+                | TokenKind::Percentage
                 | TokenKind::Equal
                 | TokenKind::NotEqual
                 | TokenKind::LessThan
@@ -249,12 +249,6 @@ impl<'a> Parser<'a> {
 
             if self.next.kind == TokenKind::Comma {
                 self.eat_token();
-
-                // error in case where a comma isn't followed by another expression
-                // e.g. `foo(1, 2, )`
-                if self.next.kind == TokenKind::RightParen {
-                    return Err(ParserError::UnexpectedToken(self.cur.clone()));
-                }
             } else if self.next.kind != TokenKind::RightParen {
                 return Err(ParserError::SyntaxError(
                     "Expected comma between arguments".to_string(),
@@ -330,12 +324,6 @@ impl<'a> Parser<'a> {
 
             if self.next.kind == TokenKind::Comma {
                 self.eat_token();
-
-                // error in case where a comma isn't followed by another expression
-                // e.g. `fn(1, 2, )`
-                if self.next.kind == TokenKind::RightParen {
-                    return Err(ParserError::UnexpectedToken(self.cur.clone()));
-                }
             }
         }
 

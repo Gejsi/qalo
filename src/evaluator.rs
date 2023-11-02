@@ -46,20 +46,15 @@ impl<'a> Evaluator<'a> {
                 self.env.borrow_mut().set(name, obj);
                 None
             }
-            Statement::ReturnStatement(expr) => None,
+            Statement::ReturnStatement(_expr) => None,
             Statement::ExpressionStatement(expr) => Some(self.eval_expression(expr)?),
             Statement::BlockStatement(statements) => {
-                // create a new environment linked to the current outer environment
-                let mut inner_env = Environment::new();
-                inner_env.outer = Some(self.env.clone());
-                let outer_env = std::mem::replace(&mut self.env, Rc::new(RefCell::new(inner_env)));
+                let outer_env = self.create_inner_env();
 
                 // save last evaluated object
                 let mut obj: Option<Object> = None;
                 for statement in statements {
-                    if let Some(statement) = self.eval_statement(statement)? {
-                        obj = Some(statement);
-                    }
+                    obj = self.eval_statement(statement)?;
                 }
 
                 // go back to the outer environment
@@ -75,8 +70,8 @@ impl<'a> Evaluator<'a> {
 
     fn eval_expression(&mut self, expr: Expression) -> Result<Object, EvalError> {
         let obj = match expr {
-            Expression::IntegerLiteral(lit) => Object::Integer(lit),
-            Expression::BooleanLiteral(lit) => Object::Boolean(lit),
+            Expression::IntegerLiteral(lit) => Object::IntegerValue(lit),
+            Expression::BooleanLiteral(lit) => Object::BooleanValue(lit),
             Expression::Identifier(name) => self.env.borrow().get(&name)?,
             Expression::BinaryExpression {
                 left,
@@ -113,36 +108,38 @@ impl<'a> Evaluator<'a> {
         let right_eval = self.eval_expression(*right)?;
 
         let obj = match (left_eval, right_eval) {
-            (Object::Integer(left_value), Object::Integer(right_value)) => match operator {
-                TokenKind::Plus => Object::Integer(left_value + right_value),
-                TokenKind::Minus => Object::Integer(left_value - right_value),
-                TokenKind::Asterisk => Object::Integer(left_value * right_value),
-                TokenKind::Equal => Object::Boolean(left_value == right_value),
-                TokenKind::NotEqual => Object::Boolean(left_value != right_value),
-                TokenKind::LessThan => Object::Boolean(left_value < right_value),
-                TokenKind::GreaterThan => Object::Boolean(left_value > right_value),
-                TokenKind::LessThanEqual => Object::Boolean(left_value <= right_value),
-                TokenKind::GreaterThanEqual => Object::Boolean(left_value >= right_value),
-                TokenKind::Modulus => {
+            (Object::IntegerValue(left_value), Object::IntegerValue(right_value)) => match operator
+            {
+                TokenKind::Plus => Object::IntegerValue(left_value + right_value),
+                TokenKind::Minus => Object::IntegerValue(left_value - right_value),
+                TokenKind::Asterisk => Object::IntegerValue(left_value * right_value),
+                TokenKind::Equal => Object::BooleanValue(left_value == right_value),
+                TokenKind::NotEqual => Object::BooleanValue(left_value != right_value),
+                TokenKind::LessThan => Object::BooleanValue(left_value < right_value),
+                TokenKind::GreaterThan => Object::BooleanValue(left_value > right_value),
+                TokenKind::LessThanEqual => Object::BooleanValue(left_value <= right_value),
+                TokenKind::GreaterThanEqual => Object::BooleanValue(left_value >= right_value),
+                TokenKind::Percentage => {
                     if right_value == 0 {
-                        return Err(EvalError::ModulusByZero);
+                        return Err(EvalError::ModuloByZero);
                     } else {
-                        Object::Integer(left_value % right_value)
+                        Object::IntegerValue(left_value % right_value)
                     }
                 }
                 TokenKind::Slash => {
                     if right_value == 0 {
                         return Err(EvalError::DivisionByZero);
                     } else {
-                        Object::Integer(left_value / right_value)
+                        Object::IntegerValue(left_value / right_value)
                     }
                 }
                 _ => return Err(EvalError::UnsupportedOperator(operator)),
             },
 
-            (Object::Boolean(left_value), Object::Boolean(right_value)) => match operator {
-                TokenKind::Equal => Object::Boolean(left_value == right_value),
-                TokenKind::NotEqual => Object::Boolean(left_value != right_value),
+            (Object::BooleanValue(left_value), Object::BooleanValue(right_value)) => match operator
+            {
+                TokenKind::Equal => Object::BooleanValue(left_value == right_value),
+                TokenKind::NotEqual => Object::BooleanValue(left_value != right_value),
                 _ => return Err(EvalError::UnsupportedOperator(operator)),
             },
 
@@ -163,13 +160,13 @@ impl<'a> Evaluator<'a> {
     ) -> Result<Object, EvalError> {
         let obj = match operator {
             TokenKind::Bang => match self.eval_expression(*value)? {
-                Object::Integer(lit) => Object::Integer(!lit),
-                Object::Boolean(lit) => Object::Boolean(!lit),
+                Object::IntegerValue(lit) => Object::IntegerValue(!lit),
+                Object::BooleanValue(lit) => Object::BooleanValue(!lit),
                 _ => return Err(EvalError::UnsupportedOperator(operator)),
             },
 
             TokenKind::Minus => match self.eval_expression(*value)? {
-                Object::Integer(lit) => Object::Integer(-lit),
+                Object::IntegerValue(lit) => Object::IntegerValue(-lit),
                 _ => return Err(EvalError::UnsupportedOperator(operator)),
             },
 
@@ -186,22 +183,23 @@ impl<'a> Evaluator<'a> {
         alternative: Option<Box<Statement>>,
     ) -> Result<Object, EvalError> {
         let obj = match self.eval_expression(*condition)? {
-            Object::Boolean(true) => self.eval_statement(*consequence)?,
-            Object::Boolean(false) => {
-                if let Some(alt) = alternative {
+            Object::BooleanValue(lit) => {
+                if lit {
+                    self.eval_statement(*consequence)?
+                } else if let Some(alt) = alternative {
                     self.eval_statement(*alt)?
                 } else {
-                    Some(Object::Unit)
+                    Some(Object::UnitValue)
                 }
             }
             _ => {
                 return Err(EvalError::TypeMismatch(
-                    "Condition must be a boolean".to_string(),
+                    "`if` condition must be a boolean".to_string(),
                 ))
             }
         };
 
-        obj.map_or(Ok(Object::Unit), Ok)
+        obj.map_or(Ok(Object::UnitValue), Ok)
     }
 
     fn eval_function_expression(
@@ -212,10 +210,9 @@ impl<'a> Evaluator<'a> {
         let closure = Closure {
             parameters,
             body: *body,
-            env: self.env.clone(),
         };
 
-        Ok(Object::Function(closure))
+        Ok(Object::FunctionValue(closure))
     }
 
     fn eval_call_expression(
@@ -226,19 +223,27 @@ impl<'a> Evaluator<'a> {
         let function = self.env.borrow().get(&path)?;
 
         let obj = match function {
-            Object::Function(Closure {
-                parameters,
-                body,
-                env,
-            }) => {
+            Object::FunctionValue(Closure { parameters, body }) => {
                 if parameters.len() != arguments.len() {
                     return Err(EvalError::FunctionCallWrongArity(
-                        parameters.len(),
-                        arguments.len(),
+                        parameters.len() as u8,
+                        arguments.len() as u8,
                     ));
                 }
 
-                Object::Unit
+                let outer_env = self.create_inner_env();
+
+                for (param, arg) in parameters.iter().zip(arguments.iter()) {
+                    // TODO: remove this clone
+                    let arg = self.eval_expression(arg.clone())?;
+                    self.env.borrow_mut().set(param.to_string(), arg);
+                }
+
+                let body_eval = self.eval_statement(body)?.unwrap_or(Object::UnitValue);
+
+                self.env = outer_env;
+
+                body_eval
             }
 
             _ => {
@@ -249,6 +254,13 @@ impl<'a> Evaluator<'a> {
         };
 
         Ok(obj)
+    }
+
+    /// Create a new environment linked to the outer environment and return the previous outer environment.
+    fn create_inner_env(&mut self) -> Rc<RefCell<Environment>> {
+        let mut inner_env = Environment::new();
+        inner_env.outer = Some(self.env.clone());
+        std::mem::replace(&mut self.env, Rc::new(RefCell::new(inner_env)))
     }
 }
 
@@ -299,8 +311,8 @@ mod tests {
             let result = &evaluator.eval_program().unwrap()[0];
 
             let expected_obj = match expected {
-                true => &Object::Boolean(true),
-                false => &Object::Boolean(false),
+                true => &Object::BooleanValue(true),
+                false => &Object::BooleanValue(false),
             };
 
             assert_eq!(result, expected_obj);
@@ -310,14 +322,14 @@ mod tests {
     #[test]
     fn eval_binary_expressions() {
         let tests = vec![
-            ("2 + 3", &Object::Integer(5)),
-            ("4 - 1", &Object::Integer(3)),
-            ("5 * 6", &Object::Integer(30)),
-            ("10 / 2", &Object::Integer(5)),
-            ("7 == 7", &Object::Boolean(true)),
-            ("8 != 9", &Object::Boolean(true)),
-            ("true == true", &Object::Boolean(true)),
-            ("false != true", &Object::Boolean(true)),
+            ("2 + 3", &Object::IntegerValue(5)),
+            ("4 - 1", &Object::IntegerValue(3)),
+            ("5 * 6", &Object::IntegerValue(30)),
+            ("10 / 2", &Object::IntegerValue(5)),
+            ("7 == 7", &Object::BooleanValue(true)),
+            ("8 != 9", &Object::BooleanValue(true)),
+            ("true == true", &Object::BooleanValue(true)),
+            ("false != true", &Object::BooleanValue(true)),
         ];
 
         for (input, expected) in tests {
@@ -330,14 +342,14 @@ mod tests {
     #[test]
     fn eval_unary_expressions() {
         let tests = vec![
-            ("-2", &Object::Integer(-2)),
-            ("!true", &Object::Boolean(false)),
-            ("!false", &Object::Boolean(true)),
-            ("!5", &Object::Integer(-6)),
-            ("!!5", &Object::Integer(5)),
-            ("!0", &Object::Integer(-1)),
-            ("!!true", &Object::Boolean(true)),
-            ("!!false", &Object::Boolean(false)),
+            ("-2", &Object::IntegerValue(-2)),
+            ("!true", &Object::BooleanValue(false)),
+            ("!false", &Object::BooleanValue(true)),
+            ("!5", &Object::IntegerValue(-6)),
+            ("!!5", &Object::IntegerValue(5)),
+            ("!0", &Object::IntegerValue(-1)),
+            ("!!true", &Object::BooleanValue(true)),
+            ("!!false", &Object::BooleanValue(false)),
         ];
 
         for (input, expected) in tests {
@@ -350,12 +362,12 @@ mod tests {
     #[test]
     fn eval_if_expression() {
         let tests = vec![
-            ("if true { 10 }", &Object::Integer(10)),
-            ("if false { 10 }", &Object::Unit),
-            ("if 1 < 2 { 10 }", &Object::Integer(10)),
-            ("if 1 > 2 { 10 }", &Object::Unit),
-            ("if 1 > 2 { 10 } else { 20 }", &Object::Integer(20)),
-            ("if 1 < 2 { 10 } else { 20 }", &Object::Integer(10)),
+            ("if true { 10 }", &Object::IntegerValue(10)),
+            ("if false { 10 }", &Object::UnitValue),
+            ("if 1 < 2 { 10 }", &Object::IntegerValue(10)),
+            ("if 1 > 2 { 10 }", &Object::UnitValue),
+            ("if 1 > 2 { 10 } else { 20 }", &Object::IntegerValue(20)),
+            ("if 1 < 2 { 10 } else { 20 }", &Object::IntegerValue(10)),
         ];
 
         for (input, expected) in tests {
@@ -363,6 +375,22 @@ mod tests {
             let result = &evaluator.eval_program().unwrap()[0];
             assert_eq!(result, expected);
         }
+    }
+
+    #[test]
+    fn eval_function_expression() {
+        let input = r#"
+            let foo = fn(x) {
+                let double = fn(y) { y * 2; };
+                double(x);
+            };
+
+            let bar = foo(3);
+            bar;
+        "#;
+        let mut evaluator = Evaluator::new(&input);
+        let result = &evaluator.eval_program().unwrap()[0];
+        assert_eq!(result, &Object::IntegerValue(6));
     }
 
     #[test]
