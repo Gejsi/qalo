@@ -1,10 +1,9 @@
-use std::{cell::RefCell, fmt, rc::Rc};
+use std::fmt;
 
 use thiserror::Error;
 
 use crate::{
     ast::{ParserError, Statement},
-    environment::Environment,
     token::TokenKind,
 };
 

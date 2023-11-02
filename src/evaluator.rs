@@ -46,7 +46,10 @@ impl<'a> Evaluator<'a> {
                 self.env.borrow_mut().set(name, obj);
                 None
             }
-            Statement::ReturnStatement(_expr) => None,
+            Statement::ReturnStatement(expr) => {
+                let obj = self.eval_expression(expr)?;
+                Some(Object::ReturnValue(Box::new(obj)))
+            }
             Statement::ExpressionStatement(expr) => Some(self.eval_expression(expr)?),
             Statement::BlockStatement(statements) => {
                 let outer_env = self.create_inner_env();
@@ -55,6 +58,14 @@ impl<'a> Evaluator<'a> {
                 let mut obj: Option<Object> = None;
                 for statement in statements {
                     obj = self.eval_statement(statement)?;
+
+                    // if the current object is a `return` value, stop evaluating this block.
+                    if let Some(obj) = &obj {
+                        match obj {
+                            Object::ReturnValue(_) => break,
+                            _ => continue,
+                        }
+                    }
                 }
 
                 // go back to the outer environment
@@ -248,7 +259,7 @@ impl<'a> Evaluator<'a> {
             _ => {
                 return Err(EvalError::FunctionNotFound(
                     "Check if this identifier is a declared function".to_string(),
-                ))
+                ));
             }
         };
 

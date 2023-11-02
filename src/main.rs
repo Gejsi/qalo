@@ -6,7 +6,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
         let foo = fn(x) {
             let double = fn(y) { y * 2; };
-            double(x);
+            return x;
+            1;
         };
 
         let bar = foo(3);
