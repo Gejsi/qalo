@@ -233,10 +233,9 @@ impl<'a> Evaluator<'a> {
 
                 let outer_env = self.create_inner_env();
 
-                for (param, arg) in parameters.iter().zip(arguments.iter()) {
-                    // TODO: remove this clone
-                    let arg = self.eval_expression(arg.clone())?;
-                    self.env.borrow_mut().set(param.to_string(), arg);
+                for (param, arg) in parameters.into_iter().zip(arguments.into_iter()) {
+                    let arg = self.eval_expression(arg)?;
+                    self.env.borrow_mut().set(param, arg);
                 }
 
                 let body_eval = self.eval_statement(body)?.unwrap_or(Object::UnitValue);
