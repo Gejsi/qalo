@@ -3,7 +3,6 @@ use std::fmt;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Token {
     pub kind: TokenKind,
-    // TODO: use `Cow`
     pub literal: String,
     // TODO: add source location for more accurate debugging info
     // source: Source,

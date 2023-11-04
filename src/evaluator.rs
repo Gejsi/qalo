@@ -27,16 +27,14 @@ impl<'a> Evaluator<'a> {
         let mut objects: Vec<Object> = vec![];
 
         for statement in program.0 {
-            if let Some(eval_statement) = self.eval_statement(statement)? {
-                objects.push(eval_statement);
-            }
+            objects.push(self.eval_statement(statement)?);
         }
 
         Ok(objects)
     }
 
-    fn eval_statement(&mut self, statement: Statement) -> Result<Option<Object>, EvalError> {
-        let try_obj = match statement {
+    fn eval_statement(&mut self, statement: Statement) -> Result<Object, EvalError> {
+        match statement {
             Statement::VarStatement {
                 kind: _,
                 name,
@@ -44,24 +42,24 @@ impl<'a> Evaluator<'a> {
             } => {
                 let obj = self.eval_expression(value)?;
                 self.env.borrow_mut().set(name, obj);
-
-                None
+                Ok(Object::UnitValue)
             }
             Statement::ReturnStatement(expr) => {
                 let obj = self.eval_expression(expr)?;
-                Some(Object::ReturnValue(Box::new(obj)))
+                Ok(Object::ReturnValue(Box::new(obj)))
             }
-            Statement::ExpressionStatement(expr) => Some(self.eval_expression(expr)?),
+            Statement::ExpressionStatement(expr) => Ok(self.eval_expression(expr)?),
             Statement::BlockStatement(statements) => {
                 let outer_env = self.create_inner_env();
 
                 // save last evaluated object
-                let mut obj: Option<Object> = None;
+                let mut obj = Object::UnitValue;
                 for statement in statements {
                     obj = self.eval_statement(statement)?;
 
                     // if the current object is a `return` value, stop evaluating this block.
-                    if let Some(Object::ReturnValue(_)) = obj {
+                    if let Object::ReturnValue(_) = obj {
+                        // obj = *inner_obj;
                         break;
                     }
                 }
@@ -70,11 +68,9 @@ impl<'a> Evaluator<'a> {
                 self.env = outer_env;
 
                 // return the last evaluated object
-                obj
+                Ok(obj)
             }
-        };
-
-        Ok(try_obj)
+        }
     }
 
     fn eval_expression(&mut self, expr: Expression) -> Result<Object, EvalError> {
@@ -104,11 +100,11 @@ impl<'a> Evaluator<'a> {
             }
         };
 
-        if let Object::ReturnValue(inner_obj) = obj {
-            Ok(*inner_obj)
-        } else {
-            Ok(obj)
-        }
+        // if let Object::ReturnValue(inner_obj) = obj {
+        //     Ok(*inner_obj)
+        // } else {
+        Ok(obj)
+        // }
     }
 
     fn eval_binary_expression(
@@ -159,7 +155,7 @@ impl<'a> Evaluator<'a> {
             (left_value, right_value) => {
                 return Err(EvalError::TypeMismatch(format!(
                 "Cannot perform operation '{operator}' between '{left_value}' and '{right_value}'",
-            )))
+            )));
             }
         };
 
@@ -202,7 +198,7 @@ impl<'a> Evaluator<'a> {
                 } else if let Some(alt) = alternative {
                     self.eval_statement(*alt)?
                 } else {
-                    Some(Object::UnitValue)
+                    Object::UnitValue
                 }
             }
             _ => {
@@ -212,7 +208,7 @@ impl<'a> Evaluator<'a> {
             }
         };
 
-        obj.map_or(Ok(Object::UnitValue), Ok)
+        Ok(obj)
     }
 
     fn eval_function_expression(
@@ -251,7 +247,7 @@ impl<'a> Evaluator<'a> {
                     self.env.borrow_mut().set(param, arg);
                 }
 
-                let body_eval = self.eval_statement(body)?.unwrap_or(Object::UnitValue);
+                let body_eval = self.eval_statement(body)?;
 
                 self.env = outer_env;
 
@@ -394,7 +390,7 @@ mod tests {
         let input = r#"
             let foo = fn(x) {
                 let double = fn(y) { y * 2; };
-                double(x);
+                return double(x);
             };
 
             let bar = foo(3);
@@ -405,6 +401,7 @@ mod tests {
         assert_eq!(result, &Object::IntegerValue(6));
     }
 
+    // TODO: rethink this test
     #[test]
     fn eval_block_statement() {
         let input = r#"

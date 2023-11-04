@@ -4,14 +4,17 @@ use jerboa::evaluator::Evaluator;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let foo = fn() {
-            let double = fn(y) { y * 2; };
-            return double;
+        let bar = fn() { return 1; };
+
+        let foo = if bar() + 1 == 2 {
+            if true {
+                return 2;
+            }
+
+            return 1;
         };
 
-        let doubler = foo();
-        let bar = doubler(2);
-        bar;
+        foo;
     "#;
 
     let mut evaluator = Evaluator::new(&input);
