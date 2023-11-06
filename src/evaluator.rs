@@ -12,6 +12,7 @@ use crate::{
 pub struct Evaluator<'a> {
     parser: Parser<'a>,
     env: Rc<RefCell<Environment>>,
+    depth: u32,
 }
 
 impl<'a> Evaluator<'a> {
@@ -19,7 +20,11 @@ impl<'a> Evaluator<'a> {
         let parser = Parser::new(&input);
         let env = Rc::new(RefCell::new(Environment::new()));
 
-        Evaluator { parser, env }
+        Evaluator {
+            parser,
+            env,
+            depth: 0,
+        }
     }
 
     pub fn eval_program(&mut self) -> Result<Vec<Object>, EvalError> {
@@ -27,7 +32,13 @@ impl<'a> Evaluator<'a> {
         let mut objects: Vec<Object> = vec![];
 
         for statement in program.0 {
-            objects.push(self.eval_statement(statement)?);
+            let obj = self.eval_statement(statement)?;
+
+            if let Object::ReturnValue(inner_obj) = obj {
+                objects.push(*inner_obj);
+            } else {
+                objects.push(obj);
+            }
         }
 
         Ok(objects)
@@ -59,7 +70,6 @@ impl<'a> Evaluator<'a> {
 
                     // if the current object is a `return` value, stop evaluating this block.
                     if let Object::ReturnValue(_) = obj {
-                        // obj = *inner_obj;
                         break;
                     }
                 }
@@ -100,11 +110,15 @@ impl<'a> Evaluator<'a> {
             }
         };
 
-        // if let Object::ReturnValue(inner_obj) = obj {
-        //     Ok(*inner_obj)
-        // } else {
+        // unwrap return values
+        if let Object::ReturnValue(ref inner_obj) = obj {
+            // TODO: tbh, i'm unsure this is enough to handle all cases
+            if self.env.borrow().outer.is_none() {
+                return Ok(*inner_obj.clone());
+            }
+        }
+
         Ok(obj)
-        // }
     }
 
     fn eval_binary_expression(

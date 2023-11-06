@@ -21,7 +21,7 @@ impl fmt::Display for Object {
         match self {
             Object::IntegerValue(value) => write!(f, "{value}"),
             Object::BooleanValue(value) => write!(f, "{value}"),
-            Object::ReturnValue(value) => value.fmt(f),
+            Object::ReturnValue(value) => write!(f, "return {value}"),
             Object::FunctionValue(value) => write!(f, "{value}"),
             Object::UnitValue => write!(f, "()"),
         }
