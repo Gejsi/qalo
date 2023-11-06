@@ -27,13 +27,7 @@ impl<'a> Evaluator<'a> {
         let mut objects: Vec<Object> = vec![];
 
         for statement in program.0 {
-            let obj = self.eval_statement(statement)?;
-
-            if let Object::ReturnValue(inner_obj) = obj {
-                objects.push(*inner_obj);
-            } else {
-                objects.push(obj);
-            }
+            objects.push(self.eval_statement(statement)?);
         }
 
         Ok(objects)
@@ -447,6 +441,23 @@ mod tests {
         let mut evaluator = Evaluator::new(&input);
         let result = &evaluator.eval_program().unwrap()[2];
         assert_eq!(result, &Object::IntegerValue(2));
+    }
+
+    #[test]
+    fn static_scope() {
+        let input = r#"
+            let i = 5;
+            let foo = fn(i) {
+                i;
+            };
+
+            foo(10);
+            i;
+        "#;
+        let mut evaluator = Evaluator::new(&input);
+        let result = &evaluator.eval_program().unwrap();
+        assert_eq!(&result[2], &Object::IntegerValue(10));
+        assert_eq!(&result[3], &Object::IntegerValue(5));
     }
 
     // #[test]

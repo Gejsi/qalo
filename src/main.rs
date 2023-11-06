@@ -4,28 +4,20 @@ use jerboa::{evaluator::Evaluator, object::Object};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let bar = fn() { return 2; };
-        let baz = if true { 2; };
-
-        let foo = if bar() + 1 == 3 {
-            if true {
-                {
-                    return fn(x) { x; };
-                }
-            }
-
-            return 1;
+        let i = 5;
+        let foo = fn(i) {
+            i;
         };
 
-        let id = foo(3);
-        id;
+        foo(10);
+        i;
     "#;
 
     let mut evaluator = Evaluator::new(&input);
-    for obj in evaluator.eval_program()? {
-        if !matches!(obj, Object::UnitValue) {
-            println!("{obj}");
-        }
+    for (i, obj) in evaluator.eval_program()?.into_iter().enumerate() {
+        // if !matches!(obj, Object::UnitValue) {
+        println!("{i} {obj}");
+        // }
     }
 
     Ok(())
