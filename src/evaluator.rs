@@ -12,7 +12,6 @@ use crate::{
 pub struct Evaluator<'a> {
     parser: Parser<'a>,
     env: Rc<RefCell<Environment>>,
-    depth: u32,
 }
 
 impl<'a> Evaluator<'a> {
@@ -20,11 +19,7 @@ impl<'a> Evaluator<'a> {
         let parser = Parser::new(&input);
         let env = Rc::new(RefCell::new(Environment::new()));
 
-        Evaluator {
-            parser,
-            env,
-            depth: 0,
-        }
+        Evaluator { parser, env }
     }
 
     pub fn eval_program(&mut self) -> Result<Vec<Object>, EvalError> {
@@ -294,14 +289,16 @@ mod tests {
     fn eval_integer_literal() {
         let input = "5";
         let mut evaluator = Evaluator::new(&input);
-        evaluator.eval_program().unwrap();
+        let result = &evaluator.eval_program().unwrap()[0];
+        assert_eq!(result, &Object::IntegerValue(5));
     }
 
     #[test]
     fn eval_boolean_literal() {
         let input = "true";
         let mut evaluator = Evaluator::new(&input);
-        evaluator.eval_program().unwrap();
+        let result = &evaluator.eval_program().unwrap()[0];
+        assert_eq!(result, &Object::BooleanValue(true));
     }
 
     #[test]
@@ -411,11 +408,30 @@ mod tests {
             bar;
         "#;
         let mut evaluator = Evaluator::new(&input);
-        let result = &evaluator.eval_program().unwrap()[0];
+        let result = &evaluator.eval_program().unwrap()[2];
         assert_eq!(result, &Object::IntegerValue(6));
     }
 
-    // TODO: rethink this test
+    #[test]
+    fn eval_function_expressions() {
+        let tests = vec![
+            ("let identity = fn(x) { x; }; identity(5);", 5),
+            ("let identity = fn(x) { return x; }; identity(5);", 5),
+            ("let double = fn(x) { x * 2; }; double(5);", 10),
+            ("let add = fn(x, y) { x + y; }; add(5, 5);", 10),
+            ("let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20),
+            ("fn(x) { x; }(5)", 5),
+        ];
+
+        for (input, expected) in tests {
+            let mut evaluator = Evaluator::new(&input);
+            let result = &evaluator.eval_program().unwrap()[1];
+            let expected_obj = &Object::IntegerValue(expected);
+
+            assert_eq!(result, expected_obj);
+        }
+    }
+
     #[test]
     fn eval_block_statement() {
         let input = r#"
@@ -424,15 +440,35 @@ mod tests {
             {
                 let b = 3;
                 b;
-
-                {
-                    a;
-                }
             }
 
             a;
         "#;
         let mut evaluator = Evaluator::new(&input);
-        evaluator.eval_program().unwrap();
+        let result = &evaluator.eval_program().unwrap()[2];
+        assert_eq!(result, &Object::IntegerValue(2));
     }
+
+    // #[test]
+    // fn eval_nested_returns() {
+    //     let input = r#"
+    //         let bar = fn() { return 2; };
+    //         let baz = if true { 2; };
+
+    //         let foo = if bar() + 1 == 3 {
+    //             if true {
+    //                 {
+    //                     return fn(x) { x; };
+    //                 }
+    //             }
+
+    //             return 1;
+    //         };
+
+    //         let id = foo(3);
+    //         id;
+    //     "#;
+    //     let mut evaluator = Evaluator::new(&input);
+    //     evaluator.eval_program().unwrap();
+    // }
 }
