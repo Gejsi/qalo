@@ -52,7 +52,8 @@ impl<'a> Evaluator<'a> {
             }
             Statement::ExpressionStatement(expr) => Ok(self.eval_expression(expr)?),
             Statement::BlockStatement(statements) => {
-                let outer_env = self.create_enclosed_env();
+                let inner_env = self.create_enclosed_env();
+                let outer_env = std::mem::replace(&mut self.env, inner_env);
 
                 // save last evaluated object
                 let mut obj = Object::UnitValue;
@@ -224,7 +225,7 @@ impl<'a> Evaluator<'a> {
         let closure = Closure {
             parameters,
             body: *body,
-            env: self.env.clone(),
+            env: self.create_enclosed_env(),
         };
 
         Ok(Object::FunctionValue(closure))
@@ -272,11 +273,11 @@ impl<'a> Evaluator<'a> {
         Ok(obj)
     }
 
-    /// Create a new environment linked to the outer environment and return the previous outer environment.
+    /// Creates a new environment linked to the outer environment
     fn create_enclosed_env(&mut self) -> Rc<RefCell<Environment>> {
         let mut inner_env = Environment::new();
         inner_env.outer = Some(self.env.clone());
-        std::mem::replace(&mut self.env, Rc::new(RefCell::new(inner_env)))
+        Rc::new(RefCell::new(inner_env))
     }
 }
 
