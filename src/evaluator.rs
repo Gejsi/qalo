@@ -1,4 +1,4 @@
-use std::{cell::RefCell, ops::DivAssign, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     ast::{Expression, Statement},
@@ -34,8 +34,6 @@ impl<'a> Evaluator<'a> {
     }
 
     fn eval_statement(&mut self, statement: Statement) -> Result<Object, EvalError> {
-        // println!("{statement}");
-        // println!("{:#?}", self.env.borrow());
         match statement {
             Statement::VarStatement {
                 kind: _,
@@ -104,7 +102,7 @@ impl<'a> Evaluator<'a> {
 
         // unwrap return values
         if let Object::ReturnValue(ref inner_obj) = obj {
-            // NOTE: tbh, i'm unsure this is enough to handle all cases
+            // FIX: this isn't enough to handle all cases
             if self.env.borrow().outer.is_none() {
                 return Ok(*inner_obj.clone());
             }
@@ -253,8 +251,12 @@ impl<'a> Evaluator<'a> {
 
                 let outer_env = std::mem::replace(&mut self.env, env);
 
+                let arguments = arguments
+                    .into_iter()
+                    .map(|arg| self.eval_expression(arg))
+                    .collect::<Result<Vec<Object>, EvalError>>()?;
+
                 for (param, arg) in parameters.into_iter().zip(arguments.into_iter()) {
-                    let arg = self.eval_expression(arg)?;
                     self.env.borrow_mut().set(param, arg);
                 }
 
@@ -427,7 +429,6 @@ mod tests {
             let mut evaluator = Evaluator::new(&input);
             let result = &evaluator.eval_program().unwrap()[1];
             let expected_obj = &Object::IntegerValue(expected);
-
             assert_eq!(result, expected_obj);
         }
     }
@@ -464,6 +465,21 @@ mod tests {
         let result = &evaluator.eval_program().unwrap();
         assert_eq!(&result[2], &Object::IntegerValue(10));
         assert_eq!(&result[3], &Object::IntegerValue(5));
+    }
+
+    #[test]
+    fn eval_closure() {
+        let input = r#"
+            let newAdder = fn(x) {
+                fn(y) { x + y };
+            };
+
+            let addTwo = newAdder(2);
+            addTwo(2);
+        "#;
+        let mut evaluator = Evaluator::new(&input);
+        let result = &evaluator.eval_program().unwrap();
+        assert_eq!(&result[2], &Object::IntegerValue(4));
     }
 
     // #[test]
