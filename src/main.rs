@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use jerboa::{evaluator::Evaluator, object::Object};
+use qalo::{evaluator::Evaluator, object::Object};
 
 fn main() -> Result<(), Box<dyn Error>> {
     // let input = r#"
