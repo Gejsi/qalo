@@ -1,9 +1,10 @@
-use std::fmt;
+use std::{cell::RefCell, fmt, rc::Rc};
 
 use thiserror::Error;
 
 use crate::{
     ast::{ParserError, Statement},
+    environment::Environment,
     token::TokenKind,
 };
 
@@ -32,6 +33,7 @@ impl fmt::Display for Object {
 pub struct Closure {
     pub parameters: Vec<String>,
     pub body: Statement,
+    pub env: Rc<RefCell<Environment>>,
 }
 
 impl fmt::Display for Closure {
