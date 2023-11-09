@@ -64,7 +64,7 @@ impl<'a> Lexer<'a> {
     pub fn eat_number(&mut self) -> &str {
         let start = self.cur;
 
-        while self.ch.is_digit(10) {
+        while self.ch.is_ascii_digit() {
             self.eat_char();
         }
 
@@ -96,12 +96,12 @@ impl<'a> Lexer<'a> {
                     self.eat_char();
                     Token {
                         kind: TokenKind::Equal,
-                        literal: "==".to_string(),
+                        literal: "==".to_owned(),
                     }
                 } else {
                     Token {
                         kind: TokenKind::Assign,
-                        literal: "=".to_string(),
+                        literal: "=".to_owned(),
                     }
                 }
             }
@@ -110,12 +110,12 @@ impl<'a> Lexer<'a> {
                     self.eat_char();
                     Token {
                         kind: TokenKind::NotEqual,
-                        literal: "!=".to_string(),
+                        literal: "!=".to_owned(),
                     }
                 } else {
                     Token {
                         kind: TokenKind::Bang,
-                        literal: "!".to_string(),
+                        literal: "!".to_owned(),
                     }
                 }
             }
@@ -124,12 +124,12 @@ impl<'a> Lexer<'a> {
                     self.eat_char();
                     Token {
                         kind: TokenKind::LessThanEqual,
-                        literal: "<=".to_string(),
+                        literal: "<=".to_owned(),
                     }
                 } else {
                     Token {
                         kind: TokenKind::LessThan,
-                        literal: "<".to_string(),
+                        literal: "<".to_owned(),
                     }
                 }
             }
@@ -138,73 +138,73 @@ impl<'a> Lexer<'a> {
                     self.eat_char();
                     Token {
                         kind: TokenKind::GreaterThanEqual,
-                        literal: ">=".to_string(),
+                        literal: ">=".to_owned(),
                     }
                 } else {
                     Token {
                         kind: TokenKind::GreaterThan,
-                        literal: ">".to_string(),
+                        literal: ">".to_owned(),
                     }
                 }
             }
             '+' => Token {
                 kind: TokenKind::Plus,
-                literal: "+".to_string(),
+                literal: "+".to_owned(),
             },
             '-' => Token {
                 kind: TokenKind::Minus,
-                literal: "-".to_string(),
+                literal: "-".to_owned(),
             },
             '/' => Token {
                 kind: TokenKind::Slash,
-                literal: "/".to_string(),
+                literal: "/".to_owned(),
             },
             '*' => Token {
                 kind: TokenKind::Asterisk,
-                literal: "*".to_string(),
+                literal: "*".to_owned(),
             },
             '%' => Token {
                 kind: TokenKind::Percentage,
-                literal: "%".to_string(),
+                literal: "%".to_owned(),
             },
             '(' => Token {
                 kind: TokenKind::LeftParen,
-                literal: "(".to_string(),
+                literal: "(".to_owned(),
             },
             ')' => Token {
                 kind: TokenKind::RightParen,
-                literal: ")".to_string(),
+                literal: ")".to_owned(),
             },
             '{' => Token {
                 kind: TokenKind::LeftBrace,
-                literal: "{".to_string(),
+                literal: "{".to_owned(),
             },
             '}' => Token {
                 kind: TokenKind::RightBrace,
-                literal: "}".to_string(),
+                literal: "}".to_owned(),
             },
             '[' => Token {
                 kind: TokenKind::LeftSquare,
-                literal: "[".to_string(),
+                literal: "[".to_owned(),
             },
             ']' => Token {
                 kind: TokenKind::RightSquare,
-                literal: "]".to_string(),
+                literal: "]".to_owned(),
             },
             ':' => Token {
                 kind: TokenKind::Colon,
-                literal: ":".to_string(),
+                literal: ":".to_owned(),
             },
             ';' => Token {
                 kind: TokenKind::Semicolon,
-                literal: ";".to_string(),
+                literal: ";".to_owned(),
             },
             ',' => Token {
                 kind: TokenKind::Comma,
-                literal: ",".to_string(),
+                literal: ",".to_owned(),
             },
             '"' => {
-                let literal = self.eat_string().to_string();
+                let literal = self.eat_string().to_owned();
 
                 Token {
                     kind: TokenKind::String,
@@ -213,19 +213,19 @@ impl<'a> Lexer<'a> {
             }
             EOF_CHAR => Token {
                 kind: TokenKind::Eof,
-                literal: "".to_string(),
+                literal: "".to_owned(),
             },
             _ => {
                 if self.ch.is_alphabetic() || self.ch == '_' {
                     let literal = self.eat_identifier();
-                    let kind = TokenKind::lookup_identifier(&literal);
+                    let kind = TokenKind::lookup_identifier(literal);
 
                     return Token {
                         kind,
-                        literal: literal.to_string(),
+                        literal: literal.to_owned(),
                     };
-                } else if self.ch.is_digit(10) {
-                    let literal = self.eat_number().to_string();
+                } else if self.ch.is_ascii_digit() {
+                    let literal = self.eat_number().to_owned();
 
                     return Token {
                         kind: TokenKind::Integer,

@@ -25,7 +25,7 @@ pub enum Precedence {
 
 impl<'a> Parser<'a> {
     pub fn new(input: &'a str) -> Self {
-        let lexer = Lexer::new(&input);
+        let lexer = Lexer::new(input);
 
         let mut parser = Self {
             lexer,

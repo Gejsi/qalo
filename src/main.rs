@@ -17,10 +17,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     // "#;
     let input = r#"
         let add = fn(x, y) { x + y; };
-        add(5 + 5, add(1, 2));
+
+        let foo = fn() {
+            add(5 + 5, add(1, 1));
+        };
+
+        foo();
     "#;
 
-    let mut evaluator = Evaluator::new(&input);
+    let mut evaluator = Evaluator::new(input);
     for obj in evaluator.eval_program()? {
         if !matches!(obj, Object::UnitValue) {
             println!("{obj}");

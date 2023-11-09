@@ -2,20 +2,13 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::object::{EvalError, Object};
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct Environment {
     pub store: HashMap<String, Object>,
     pub outer: Option<Rc<RefCell<Environment>>>,
 }
 
 impl Environment {
-    pub fn new() -> Self {
-        Environment {
-            store: HashMap::new(),
-            outer: None,
-        }
-    }
-
     pub fn get(&self, name: &str) -> Result<Object, EvalError> {
         if let Some(obj) = self.store.get(name) {
             Ok(obj.clone())

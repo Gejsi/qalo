@@ -16,8 +16,8 @@ pub struct Evaluator<'a> {
 
 impl<'a> Evaluator<'a> {
     pub fn new(input: &'a str) -> Self {
-        let parser = Parser::new(&input);
-        let env = Rc::new(RefCell::new(Environment::new()));
+        let parser = Parser::new(input);
+        let env = Rc::new(RefCell::new(Environment::default()));
 
         Evaluator { parser, env }
     }
@@ -82,9 +82,9 @@ impl<'a> Evaluator<'a> {
                 left,
                 operator,
                 right,
-            } => self.eval_binary_expression(left, operator, right)?,
+            } => self.eval_binary_expression(*left, operator, *right)?,
             Expression::UnaryExpression { operator, value } => {
-                self.eval_unary_expression(operator, value)?
+                self.eval_unary_expression(operator, *value)?
             }
             Expression::GroupedExpression(expr) => self.eval_expression(*expr)?,
             Expression::CallExpression { path, arguments } => {
@@ -94,9 +94,9 @@ impl<'a> Evaluator<'a> {
                 condition,
                 consequence,
                 alternative,
-            } => self.eval_if_expression(condition, consequence, alternative)?,
+            } => self.eval_if_expression(*condition, *consequence, alternative)?,
             Expression::FunctionExpression { parameters, body } => {
-                self.eval_function_expression(parameters, body)?
+                self.eval_function_expression(parameters, *body)?
             }
         };
 
@@ -113,12 +113,12 @@ impl<'a> Evaluator<'a> {
 
     fn eval_binary_expression(
         &mut self,
-        left: Box<Expression>,
+        left: Expression,
         operator: TokenKind,
-        right: Box<Expression>,
+        right: Expression,
     ) -> Result<Object, EvalError> {
-        let left_eval = self.eval_expression(*left)?;
-        let right_eval = self.eval_expression(*right)?;
+        let left_eval = self.eval_expression(left)?;
+        let right_eval = self.eval_expression(right)?;
 
         let obj = match (left_eval, right_eval) {
             (Object::IntegerValue(left_value), Object::IntegerValue(right_value)) => match operator
@@ -169,16 +169,16 @@ impl<'a> Evaluator<'a> {
     fn eval_unary_expression(
         &mut self,
         operator: TokenKind,
-        value: Box<Expression>,
+        value: Expression,
     ) -> Result<Object, EvalError> {
         let obj = match operator {
-            TokenKind::Bang => match self.eval_expression(*value)? {
+            TokenKind::Bang => match self.eval_expression(value)? {
                 Object::IntegerValue(lit) => Object::IntegerValue(!lit),
                 Object::BooleanValue(lit) => Object::BooleanValue(!lit),
                 _ => return Err(EvalError::UnsupportedOperator(operator)),
             },
 
-            TokenKind::Minus => match self.eval_expression(*value)? {
+            TokenKind::Minus => match self.eval_expression(value)? {
                 Object::IntegerValue(lit) => Object::IntegerValue(-lit),
                 _ => return Err(EvalError::UnsupportedOperator(operator)),
             },
@@ -191,14 +191,14 @@ impl<'a> Evaluator<'a> {
 
     fn eval_if_expression(
         &mut self,
-        condition: Box<Expression>,
-        consequence: Box<Statement>,
+        condition: Expression,
+        consequence: Statement,
         alternative: Option<Box<Statement>>,
     ) -> Result<Object, EvalError> {
-        let obj = match self.eval_expression(*condition)? {
+        let obj = match self.eval_expression(condition)? {
             Object::BooleanValue(lit) => {
                 if lit {
-                    self.eval_statement(*consequence)?
+                    self.eval_statement(consequence)?
                 } else if let Some(alt) = alternative {
                     self.eval_statement(*alt)?
                 } else {
@@ -218,11 +218,11 @@ impl<'a> Evaluator<'a> {
     fn eval_function_expression(
         &mut self,
         parameters: Vec<String>,
-        body: Box<Statement>,
+        body: Statement,
     ) -> Result<Object, EvalError> {
         let closure = Closure {
             parameters,
-            body: *body,
+            body,
             env: self.create_enclosed_env(),
         };
 
@@ -283,8 +283,10 @@ impl<'a> Evaluator<'a> {
 
     /// Creates a new environment linked to the outer environment
     fn create_enclosed_env(&mut self) -> Rc<RefCell<Environment>> {
-        let mut inner_env = Environment::new();
-        inner_env.outer = Some(self.env.clone());
+        let inner_env = Environment {
+            outer: Some(self.env.clone()),
+            ..Default::default()
+        };
         Rc::new(RefCell::new(inner_env))
     }
 }
