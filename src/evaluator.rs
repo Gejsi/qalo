@@ -249,19 +249,25 @@ impl<'a> Evaluator<'a> {
                     ));
                 }
 
-                let outer_env = std::mem::replace(&mut self.env, env);
-
+                // evaluate arguments in the current scope
                 let arguments = arguments
                     .into_iter()
                     .map(|arg| self.eval_expression(arg))
                     .collect::<Result<Vec<Object>, EvalError>>()?;
 
+                // switch to the closure environment
+                let outer_env = std::mem::replace(&mut self.env, env);
+
+                // add bindings to the closure environment
                 for (param, arg) in parameters.into_iter().zip(arguments.into_iter()) {
                     self.env.borrow_mut().set(param, arg);
                 }
 
+                // evaluate the closure body
                 let body_obj = self.eval_statement(body)?;
+                // go back to the old environment
                 self.env = outer_env;
+
                 body_obj
             }
 

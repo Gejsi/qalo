@@ -22,9 +22,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut evaluator = Evaluator::new(&input);
     for obj in evaluator.eval_program()? {
-        // if !matches!(obj, Object::UnitValue) {
-        println!("{obj}");
-        // }
+        if !matches!(obj, Object::UnitValue) {
+            println!("{obj}");
+        }
     }
 
     Ok(())
