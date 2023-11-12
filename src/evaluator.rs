@@ -12,6 +12,7 @@ use crate::{
 pub struct Evaluator<'a> {
     parser: Parser<'a>,
     env: Rc<RefCell<Environment>>,
+    returned_value: Option<Object>,
 }
 
 impl<'a> Evaluator<'a> {
@@ -19,7 +20,11 @@ impl<'a> Evaluator<'a> {
         let parser = Parser::new(input);
         let env = Rc::new(RefCell::new(Environment::default()));
 
-        Evaluator { parser, env }
+        Evaluator {
+            parser,
+            env,
+            returned_value: None,
+        }
     }
 
     pub fn eval_program(&mut self) -> Result<Vec<Object>, EvalError> {
@@ -27,7 +32,8 @@ impl<'a> Evaluator<'a> {
         let mut objects: Vec<Object> = vec![];
 
         for statement in program.0 {
-            objects.push(self.eval_statement(statement)?);
+            let obj = self.eval_statement(statement)?;
+            objects.push(obj);
         }
 
         Ok(objects)
@@ -46,6 +52,7 @@ impl<'a> Evaluator<'a> {
             }
             Statement::ReturnStatement(expr) => {
                 let obj = self.eval_expression(expr)?;
+                self.returned_value = Some(obj.clone());
                 Ok(Object::ReturnValue(Box::new(obj)))
             }
             Statement::ExpressionStatement(expr) => Ok(self.eval_expression(expr)?),
@@ -56,10 +63,17 @@ impl<'a> Evaluator<'a> {
                 // save last evaluated object
                 let mut obj = Object::UnitValue;
                 for statement in statements {
+                    if let Some(returned_value) = &self.returned_value {
+                        // obj = returned_value.clone();
+                        self.returned_value = None;
+                        break;
+                    }
+
                     obj = self.eval_statement(statement)?;
 
-                    // if the current object is a `return` value, stop evaluating this block.
+                    // if the current object is a `return` value, stop evaluating this block
                     if let Object::ReturnValue(_) = obj {
+                        // obj = *inner_obj.clone();
                         break;
                     }
                 }
@@ -100,14 +114,6 @@ impl<'a> Evaluator<'a> {
             }
         };
 
-        // unwrap return values
-        if let Object::ReturnValue(ref inner_obj) = obj {
-            // FIX: this isn't enough to handle all cases
-            if self.env.borrow().outer.is_none() {
-                return Ok(*inner_obj.clone());
-            }
-        }
-
         Ok(obj)
     }
 
@@ -117,49 +123,47 @@ impl<'a> Evaluator<'a> {
         operator: TokenKind,
         right: Expression,
     ) -> Result<Object, EvalError> {
-        let left_eval = self.eval_expression(left)?;
-        let right_eval = self.eval_expression(right)?;
+        let left_obj = self.eval_expression(left)?;
+        let right_obj = self.eval_expression(right)?;
 
-        let obj = match (left_eval, right_eval) {
-            (Object::IntegerValue(left_value), Object::IntegerValue(right_value)) => match operator
-            {
-                TokenKind::Plus => Object::IntegerValue(left_value + right_value),
-                TokenKind::Minus => Object::IntegerValue(left_value - right_value),
-                TokenKind::Asterisk => Object::IntegerValue(left_value * right_value),
-                TokenKind::Equal => Object::BooleanValue(left_value == right_value),
-                TokenKind::NotEqual => Object::BooleanValue(left_value != right_value),
-                TokenKind::LessThan => Object::BooleanValue(left_value < right_value),
-                TokenKind::GreaterThan => Object::BooleanValue(left_value > right_value),
-                TokenKind::LessThanEqual => Object::BooleanValue(left_value <= right_value),
-                TokenKind::GreaterThanEqual => Object::BooleanValue(left_value >= right_value),
+        let obj = match (left_obj, right_obj) {
+            (Object::IntegerValue(lhs), Object::IntegerValue(rhs)) => match operator {
+                TokenKind::Plus => Object::IntegerValue(lhs + rhs),
+                TokenKind::Minus => Object::IntegerValue(lhs - rhs),
+                TokenKind::Asterisk => Object::IntegerValue(lhs * rhs),
+                TokenKind::Equal => Object::BooleanValue(lhs == rhs),
+                TokenKind::NotEqual => Object::BooleanValue(lhs != rhs),
+                TokenKind::LessThan => Object::BooleanValue(lhs < rhs),
+                TokenKind::GreaterThan => Object::BooleanValue(lhs > rhs),
+                TokenKind::LessThanEqual => Object::BooleanValue(lhs <= rhs),
+                TokenKind::GreaterThanEqual => Object::BooleanValue(lhs >= rhs),
                 TokenKind::Percentage => {
-                    if right_value == 0 {
+                    if rhs == 0 {
                         return Err(EvalError::ModuloByZero);
                     } else {
-                        Object::IntegerValue(left_value % right_value)
+                        Object::IntegerValue(lhs % rhs)
                     }
                 }
                 TokenKind::Slash => {
-                    if right_value == 0 {
+                    if rhs == 0 {
                         return Err(EvalError::DivisionByZero);
                     } else {
-                        Object::IntegerValue(left_value / right_value)
+                        Object::IntegerValue(lhs / rhs)
                     }
                 }
                 _ => return Err(EvalError::UnsupportedOperator(operator)),
             },
 
-            (Object::BooleanValue(left_value), Object::BooleanValue(right_value)) => match operator
-            {
-                TokenKind::Equal => Object::BooleanValue(left_value == right_value),
-                TokenKind::NotEqual => Object::BooleanValue(left_value != right_value),
+            (Object::BooleanValue(lhs), Object::BooleanValue(rhs)) => match operator {
+                TokenKind::Equal => Object::BooleanValue(lhs == rhs),
+                TokenKind::NotEqual => Object::BooleanValue(lhs != rhs),
                 _ => return Err(EvalError::UnsupportedOperator(operator)),
             },
 
-            (left_value, right_value) => {
+            (lhs, rhs) => {
                 return Err(EvalError::TypeMismatch(format!(
-                "Cannot perform operation '{operator}' between '{left_value}' and '{right_value}'",
-            )));
+                    "Cannot perform operation '{operator}' between '{lhs}' and '{rhs}'",
+                )));
             }
         };
 
@@ -258,7 +262,7 @@ impl<'a> Evaluator<'a> {
                 // switch to the closure environment
                 let outer_env = std::mem::replace(&mut self.env, env);
 
-                // add bindings to the closure environment
+                // add bindings in the closure environment
                 for (param, arg) in parameters.into_iter().zip(arguments.into_iter()) {
                     self.env.borrow_mut().set(param, arg);
                 }
@@ -298,7 +302,7 @@ mod tests {
     #[test]
     fn eval_integer_literal() {
         let input = "5";
-        let mut evaluator = Evaluator::new(&input);
+        let mut evaluator = Evaluator::new(input);
         let result = &evaluator.eval_program().unwrap()[0];
         assert_eq!(result, &Object::IntegerValue(5));
     }
@@ -306,7 +310,7 @@ mod tests {
     #[test]
     fn eval_boolean_literal() {
         let input = "true";
-        let mut evaluator = Evaluator::new(&input);
+        let mut evaluator = Evaluator::new(input);
         let result = &evaluator.eval_program().unwrap()[0];
         assert_eq!(result, &Object::BooleanValue(true));
     }
@@ -336,7 +340,7 @@ mod tests {
         ];
 
         for (input, expected) in tests {
-            let mut evaluator = Evaluator::new(&input);
+            let mut evaluator = Evaluator::new(input);
             let result = &evaluator.eval_program().unwrap()[0];
 
             let expected_obj = match expected {
@@ -362,7 +366,7 @@ mod tests {
         ];
 
         for (input, expected) in tests {
-            let mut evaluator = Evaluator::new(&input);
+            let mut evaluator = Evaluator::new(input);
             let result = &evaluator.eval_program().unwrap()[0];
             assert_eq!(result, expected);
         }
@@ -382,7 +386,7 @@ mod tests {
         ];
 
         for (input, expected) in tests {
-            let mut evaluator = Evaluator::new(&input);
+            let mut evaluator = Evaluator::new(input);
             let result = &evaluator.eval_program().unwrap()[0];
             assert_eq!(result, expected);
         }
@@ -400,7 +404,7 @@ mod tests {
         ];
 
         for (input, expected) in tests {
-            let mut evaluator = Evaluator::new(&input);
+            let mut evaluator = Evaluator::new(input);
             let result = &evaluator.eval_program().unwrap()[0];
             assert_eq!(result, expected);
         }
@@ -417,7 +421,7 @@ mod tests {
             let bar = foo(3);
             bar;
         "#;
-        let mut evaluator = Evaluator::new(&input);
+        let mut evaluator = Evaluator::new(input);
         let result = &evaluator.eval_program().unwrap()[2];
         assert_eq!(result, &Object::IntegerValue(6));
     }
@@ -434,7 +438,7 @@ mod tests {
         ];
 
         for (input, expected) in tests {
-            let mut evaluator = Evaluator::new(&input);
+            let mut evaluator = Evaluator::new(input);
             let result = &evaluator.eval_program().unwrap()[1];
             let expected_obj = &Object::IntegerValue(expected);
             assert_eq!(result, expected_obj);
@@ -453,7 +457,7 @@ mod tests {
 
             a;
         "#;
-        let mut evaluator = Evaluator::new(&input);
+        let mut evaluator = Evaluator::new(input);
         let result = &evaluator.eval_program().unwrap()[2];
         assert_eq!(result, &Object::IntegerValue(2));
     }
@@ -469,7 +473,7 @@ mod tests {
             foo(10);
             i;
         "#;
-        let mut evaluator = Evaluator::new(&input);
+        let mut evaluator = Evaluator::new(input);
         let result = &evaluator.eval_program().unwrap();
         assert_eq!(&result[2], &Object::IntegerValue(10));
         assert_eq!(&result[3], &Object::IntegerValue(5));
@@ -485,7 +489,7 @@ mod tests {
             let addTwo = newAdder(2);
             addTwo(2);
         "#;
-        let mut evaluator = Evaluator::new(&input);
+        let mut evaluator = Evaluator::new(input);
         let result = &evaluator.eval_program().unwrap();
         assert_eq!(&result[2], &Object::IntegerValue(4));
     }
@@ -509,7 +513,7 @@ mod tests {
     //         let id = foo(3);
     //         id;
     //     "#;
-    //     let mut evaluator = Evaluator::new(&input);
+    //     let mut evaluator = Evaluator::new(input);
     //     evaluator.eval_program().unwrap();
     // }
 }

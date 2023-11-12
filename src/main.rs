@@ -22,14 +22,26 @@ fn main() -> Result<(), Box<dyn Error>> {
             add(5 + 5, add(1, 1));
         };
 
-        foo();
+        let faz = fn() {
+            return 12;
+        };
+
+        let bar = if true {
+            if true {
+                return 0;
+            }
+
+            return 1;
+        };
+
+        bar;
     "#;
 
     let mut evaluator = Evaluator::new(input);
     for obj in evaluator.eval_program()? {
-        if !matches!(obj, Object::UnitValue) {
-            println!("{obj}");
-        }
+        // if !matches!(obj, Object::UnitValue) {
+        println!("{obj}");
+        // }
     }
 
     Ok(())
