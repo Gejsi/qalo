@@ -105,6 +105,7 @@ impl<'a> Evaluator<'a> {
         let obj = match expr {
             Expression::IntegerLiteral(lit) => Object::IntegerValue(lit),
             Expression::BooleanLiteral(lit) => Object::BooleanValue(lit),
+            Expression::StringLiteral(lit) => Object::StringValue(lit),
             Expression::Identifier(name) => self.env.borrow().get(&name)?,
             Expression::BinaryExpression {
                 left,
@@ -337,6 +338,14 @@ mod tests {
     }
 
     #[test]
+    fn eval_string_literal() {
+        let input = r#""foo""#;
+        let mut evaluator = Evaluator::new(input);
+        let result = &evaluator.eval_program().unwrap()[0];
+        assert_eq!(result, &Object::StringValue("foo".to_owned()));
+    }
+
+    #[test]
     fn eval_boolean_expressions() {
         let tests = vec![
             ("true", true),
@@ -543,5 +552,22 @@ mod tests {
         let mut evaluator = Evaluator::new(input);
         let result = &evaluator.eval_program().unwrap();
         assert_eq!(&result[4], &Object::IntegerValue(20));
+    }
+
+    #[test]
+    fn eval_function_as_parameter() {
+        let input = r#"
+            let add = fn(x, y) { return x + y; };
+            let sub = fn(x, y) { return x - y; };
+            let applyFunc = fn(a, b, cb) {
+                cb(a, b)
+            };
+            applyFunc(2, 2, add);
+            applyFunc(10, 2, sub);
+        "#;
+        let mut evaluator = Evaluator::new(input);
+        let result = &evaluator.eval_program().unwrap();
+        assert_eq!(&result[3], &Object::IntegerValue(4));
+        assert_eq!(&result[4], &Object::IntegerValue(8));
     }
 }

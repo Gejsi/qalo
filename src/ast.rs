@@ -10,7 +10,7 @@ pub struct Program(pub Vec<Statement>);
 impl fmt::Display for Program {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for statement in &self.0 {
-            write!(f, "{}", statement)?;
+            write!(f, "{statement}")?;
         }
         Ok(())
     }
@@ -59,6 +59,8 @@ pub enum Expression {
 
     BooleanLiteral(bool),
 
+    StringLiteral(String),
+
     BinaryExpression {
         left: Box<Expression>,
         operator: TokenKind,
@@ -95,6 +97,7 @@ impl fmt::Display for Expression {
             Expression::Identifier(s) => write!(f, "{}", s),
             Expression::IntegerLiteral(n) => write!(f, "{}", n),
             Expression::BooleanLiteral(b) => write!(f, "{}", b),
+            Expression::StringLiteral(s) => write!(f, "\"{}\"", s),
             Expression::BinaryExpression {
                 left,
                 operator,

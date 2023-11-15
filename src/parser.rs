@@ -174,6 +174,7 @@ impl<'a> Parser<'a> {
             TokenKind::Integer => Expression::IntegerLiteral(self.cur.literal.parse::<i32>()?),
             TokenKind::True => Expression::BooleanLiteral(true),
             TokenKind::False => Expression::BooleanLiteral(false),
+            TokenKind::String => Expression::StringLiteral(self.cur.literal.clone()),
 
             TokenKind::Identifier => {
                 if self.next.kind == TokenKind::LeftParen {

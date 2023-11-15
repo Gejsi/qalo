@@ -12,6 +12,7 @@ use crate::{
 pub enum Object {
     IntegerValue(i32),
     BooleanValue(bool),
+    StringValue(String),
     ReturnValue(Box<Object>),
     FunctionValue(Closure),
     UnitValue,
@@ -22,8 +23,9 @@ impl fmt::Display for Object {
         match self {
             Object::IntegerValue(value) => write!(f, "{value}"),
             Object::BooleanValue(value) => write!(f, "{value}"),
-            Object::ReturnValue(value) => write!(f, "return {value}"),
+            Object::StringValue(value) => write!(f, "\"{value}\""),
             Object::FunctionValue(value) => write!(f, "{value}"),
+            Object::ReturnValue(value) => write!(f, "return {value}"),
             Object::UnitValue => write!(f, "()"),
         }
     }
