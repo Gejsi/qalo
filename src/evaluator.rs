@@ -182,6 +182,11 @@ impl<'a> Evaluator<'a> {
                 _ => return Err(EvalError::UnsupportedOperator(operator)),
             },
 
+            (Object::StringValue(lhs), Object::StringValue(rhs)) => match operator {
+                TokenKind::Plus => Object::StringValue(lhs + &rhs),
+                _ => return Err(EvalError::UnsupportedOperator(operator)),
+            },
+
             (lhs, rhs) => {
                 return Err(EvalError::TypeMismatch(format!(
                     "Cannot perform operation '{operator}' between '{lhs}' and '{rhs}'",
@@ -343,6 +348,22 @@ mod tests {
         let mut evaluator = Evaluator::new(input);
         let result = &evaluator.eval_program().unwrap()[0];
         assert_eq!(result, &Object::StringValue("foo".to_owned()));
+    }
+
+    #[test]
+    fn eval_string_concatenation() {
+        let input = r#"
+            let say = fn() {
+                let a = "hello";
+                let b = "world";
+                return a + " " + b;
+            };
+
+            say();
+        "#;
+        let mut evaluator = Evaluator::new(input);
+        let result = &evaluator.eval_program().unwrap()[1];
+        assert_eq!(result, &Object::StringValue("hello world".to_owned()));
     }
 
     #[test]
