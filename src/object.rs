@@ -62,8 +62,8 @@ pub enum EvalError {
     #[error("Function call with the wrong number of arguments. Expected {0}, got {1}")]
     FunctionCallWrongArity(u8, u8),
 
-    #[error("Return statement used outside a function")]
-    ReturnOutsideFunction,
+    #[error("Return statement used outside an expression")]
+    ReturnOutsideExpression,
 
     #[error("Unsupported operator: {0}")]
     UnsupportedOperator(TokenKind),

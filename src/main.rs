@@ -15,23 +15,26 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     //     counter(0);
     // "#;
+
     let input = r#"
-        let add = fn(x, y) { x + y; };
+        let add = fn(x, y) { return x + y; };
 
         let foo = fn() {
-            add(5 + 5, add(1, 1));
+            return add(5 + 5, add(1, 1));
         };
 
         let faz = fn() {
-            return 12;
+            return 20;
         };
 
-        let bar = if true {
-            if true {
-                return 0;
+        let bar = if foo() == 12 {
+            if foo() == 12 {
+                return faz();
             }
 
-            return 1;
+            return 100;
+        } else {
+            return -1;
         };
 
         bar;

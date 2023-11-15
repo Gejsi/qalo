@@ -12,7 +12,6 @@ use crate::{
 pub struct Evaluator<'a> {
     parser: Parser<'a>,
     env: Rc<RefCell<Environment>>,
-    returned_value: Option<Object>,
 }
 
 impl<'a> Evaluator<'a> {
@@ -20,11 +19,7 @@ impl<'a> Evaluator<'a> {
         let parser = Parser::new(input);
         let env = Rc::new(RefCell::new(Environment::default()));
 
-        Evaluator {
-            parser,
-            env,
-            returned_value: None,
-        }
+        Evaluator { parser, env }
     }
 
     pub fn eval_program(&mut self) -> Result<Vec<Object>, EvalError> {
@@ -33,7 +28,13 @@ impl<'a> Evaluator<'a> {
 
         for statement in program.0 {
             let obj = self.eval_statement(statement)?;
-            objects.push(obj);
+
+            // unwrap top-level return values
+            if let Object::ReturnValue(inner_obj) = obj {
+                objects.push(*inner_obj);
+            } else {
+                objects.push(obj);
+            }
         }
 
         Ok(objects)
@@ -46,34 +47,43 @@ impl<'a> Evaluator<'a> {
                 name,
                 value,
             } => {
-                let obj = self.eval_expression(value)?;
+                let obj = self.eval_expression(value, true)?;
                 self.env.borrow_mut().set(name, obj);
                 Ok(Object::UnitValue)
             }
-            Statement::ReturnStatement(expr) => {
-                let obj = self.eval_expression(expr)?;
-                self.returned_value = Some(obj.clone());
-                Ok(Object::ReturnValue(Box::new(obj)))
+            Statement::ReturnStatement(_) => {
+                // return statements aren't allowed at the top-level scope
+                return Err(EvalError::ReturnOutsideExpression);
             }
-            Statement::ExpressionStatement(expr) => Ok(self.eval_expression(expr)?),
+            Statement::ExpressionStatement(expr) => Ok(self.eval_expression(expr, true)?),
             Statement::BlockStatement(statements) => {
                 let inner_env = self.create_enclosed_env();
                 let outer_env = std::mem::replace(&mut self.env, inner_env);
 
                 // save last evaluated object
                 let mut obj = Object::UnitValue;
+
                 for statement in statements {
-                    if let Some(returned_value) = &self.returned_value {
-                        // obj = returned_value.clone();
-                        self.returned_value = None;
+                    // handle return statements inside a block
+                    if let Statement::ReturnStatement(expr) = statement {
+                        let expr_eval = self.eval_expression(expr, true)?;
+
+                        // if the result of the evaluation is a *return value* itself, unwrap it...
+                        if let Object::ReturnValue(inner_obj) = expr_eval {
+                            obj = Object::ReturnValue(Box::new(*inner_obj));
+                        } else {
+                            // ...otherwise, wrap the value inside a *return value*
+                            obj = Object::ReturnValue(Box::new(expr_eval));
+                        }
+
                         break;
                     }
 
+                    // evaluate all other types of statements
                     obj = self.eval_statement(statement)?;
 
-                    // if the current object is a `return` value, stop evaluating this block
+                    // if the current object is a *return value*, stop evaluating this block
                     if let Object::ReturnValue(_) = obj {
-                        // obj = *inner_obj.clone();
                         break;
                     }
                 }
@@ -87,7 +97,11 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    fn eval_expression(&mut self, expr: Expression) -> Result<Object, EvalError> {
+    fn eval_expression(
+        &mut self,
+        expr: Expression,
+        within_statement: bool,
+    ) -> Result<Object, EvalError> {
         let obj = match expr {
             Expression::IntegerLiteral(lit) => Object::IntegerValue(lit),
             Expression::BooleanLiteral(lit) => Object::BooleanValue(lit),
@@ -100,7 +114,7 @@ impl<'a> Evaluator<'a> {
             Expression::UnaryExpression { operator, value } => {
                 self.eval_unary_expression(operator, *value)?
             }
-            Expression::GroupedExpression(expr) => self.eval_expression(*expr)?,
+            Expression::GroupedExpression(expr) => self.eval_expression(*expr, within_statement)?,
             Expression::CallExpression { path, arguments } => {
                 self.eval_call_expression(path, arguments)?
             }
@@ -114,6 +128,13 @@ impl<'a> Evaluator<'a> {
             }
         };
 
+        // unwrap return values
+        if let Object::ReturnValue(ref inner_obj) = obj {
+            if !within_statement {
+                return Ok(*inner_obj.clone());
+            }
+        }
+
         Ok(obj)
     }
 
@@ -123,8 +144,8 @@ impl<'a> Evaluator<'a> {
         operator: TokenKind,
         right: Expression,
     ) -> Result<Object, EvalError> {
-        let left_obj = self.eval_expression(left)?;
-        let right_obj = self.eval_expression(right)?;
+        let left_obj = self.eval_expression(left, false)?;
+        let right_obj = self.eval_expression(right, false)?;
 
         let obj = match (left_obj, right_obj) {
             (Object::IntegerValue(lhs), Object::IntegerValue(rhs)) => match operator {
@@ -176,13 +197,13 @@ impl<'a> Evaluator<'a> {
         value: Expression,
     ) -> Result<Object, EvalError> {
         let obj = match operator {
-            TokenKind::Bang => match self.eval_expression(value)? {
+            TokenKind::Bang => match self.eval_expression(value, false)? {
                 Object::IntegerValue(lit) => Object::IntegerValue(!lit),
                 Object::BooleanValue(lit) => Object::BooleanValue(!lit),
                 _ => return Err(EvalError::UnsupportedOperator(operator)),
             },
 
-            TokenKind::Minus => match self.eval_expression(value)? {
+            TokenKind::Minus => match self.eval_expression(value, false)? {
                 Object::IntegerValue(lit) => Object::IntegerValue(-lit),
                 _ => return Err(EvalError::UnsupportedOperator(operator)),
             },
@@ -199,7 +220,7 @@ impl<'a> Evaluator<'a> {
         consequence: Statement,
         alternative: Option<Box<Statement>>,
     ) -> Result<Object, EvalError> {
-        let obj = match self.eval_expression(condition)? {
+        let obj = match self.eval_expression(condition, false)? {
             Object::BooleanValue(lit) => {
                 if lit {
                     self.eval_statement(consequence)?
@@ -256,7 +277,7 @@ impl<'a> Evaluator<'a> {
                 // evaluate arguments in the current scope
                 let arguments = arguments
                     .into_iter()
-                    .map(|arg| self.eval_expression(arg))
+                    .map(|arg| self.eval_expression(arg, false))
                     .collect::<Result<Vec<Object>, EvalError>>()?;
 
                 // switch to the closure environment
@@ -494,26 +515,33 @@ mod tests {
         assert_eq!(&result[2], &Object::IntegerValue(4));
     }
 
-    // #[test]
-    // fn eval_nested_returns() {
-    //     let input = r#"
-    //         let bar = fn() { return 2; };
-    //         let baz = if true { 2; };
+    #[test]
+    fn eval_nested_returns() {
+        let input = r#"
+            let add = fn(x, y) { return x + y; };
 
-    //         let foo = if bar() + 1 == 3 {
-    //             if true {
-    //                 {
-    //                     return fn(x) { x; };
-    //                 }
-    //             }
+            let foo = fn() {
+                return add(5 + 5, add(1, 1));
+            };
 
-    //             return 1;
-    //         };
+            let faz = fn() {
+                return 20;
+            };
 
-    //         let id = foo(3);
-    //         id;
-    //     "#;
-    //     let mut evaluator = Evaluator::new(input);
-    //     evaluator.eval_program().unwrap();
-    // }
+            let bar = if foo() == 12 {
+                if foo() == 12 {
+                    return faz();
+                }
+
+                return 100;
+            } else {
+                return -1;
+            };
+
+            bar;
+        "#;
+        let mut evaluator = Evaluator::new(input);
+        let result = &evaluator.eval_program().unwrap();
+        assert_eq!(&result[4], &Object::IntegerValue(20));
+    }
 }
