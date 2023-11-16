@@ -1,9 +1,9 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
 
 use crate::{
     ast::{Expression, Statement},
     environment::Environment,
-    object::{Closure, EvalError, Object},
+    object::{BuiltinFunction, Closure, EvalError, Object},
     parser::Parser,
     token::TokenKind,
 };
@@ -265,7 +265,8 @@ impl<'a> Evaluator<'a> {
         path: String,
         arguments: Vec<Expression>,
     ) -> Result<Object, EvalError> {
-        let function = self.env.borrow().get(&path)?;
+        let function =
+            BuiltinFunction::lookup_function(&path).or_else(|_| self.env.borrow().get(&path))?;
 
         let obj = match function {
             Object::FunctionValue(Closure {
@@ -301,6 +302,14 @@ impl<'a> Evaluator<'a> {
 
                 body_obj
             }
+
+            Object::BuiltinValue(builtin) => match builtin {
+                BuiltinFunction::Len => {
+                    println!("");
+                    Object::IntegerValue(2)
+                }
+                BuiltinFunction::Push => todo!(),
+            },
 
             _ => {
                 return Err(EvalError::FunctionNotFound(
@@ -353,13 +362,13 @@ mod tests {
     #[test]
     fn eval_string_concatenation() {
         let input = r#"
-            let say = fn() {
+            let greet = fn() {
                 let a = "hello";
                 let b = "world";
                 return a + " " + b;
             };
 
-            say();
+            greet();
         "#;
         let mut evaluator = Evaluator::new(input);
         let result = &evaluator.eval_program().unwrap()[1];

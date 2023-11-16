@@ -4,13 +4,8 @@ use qalo::{evaluator::Evaluator, object::Object, parser::Parser};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let say = fn() {
-            let a = "hello";
-            let b = "world";
-            return a + " " + b;
-        };
-
-        say();
+        let a = len("hello");
+        a;
     "#;
 
     // let mut parser = Parser::new(input);

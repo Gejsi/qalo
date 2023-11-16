@@ -15,6 +15,7 @@ pub enum Object {
     StringValue(String),
     ReturnValue(Box<Object>),
     FunctionValue(Closure),
+    BuiltinValue(BuiltinFunction),
     UnitValue,
 }
 
@@ -26,6 +27,7 @@ impl fmt::Display for Object {
             Object::StringValue(value) => write!(f, "\"{value}\""),
             Object::FunctionValue(value) => write!(f, "{value}"),
             Object::ReturnValue(value) => write!(f, "return {value}"),
+            Object::BuiltinValue(value) => write!(f, "built-in function {value}"),
             Object::UnitValue => write!(f, "()"),
         }
     }
@@ -41,6 +43,32 @@ pub struct Closure {
 impl fmt::Display for Closure {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "fn({}) {}", self.parameters.join(", "), self.body)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum BuiltinFunction {
+    Len,
+    Push,
+}
+
+impl BuiltinFunction {
+    /// Matches built-in functions.
+    pub fn lookup_function(identifier: &str) -> Result<Object, EvalError> {
+        match identifier {
+            "len" => Ok(Object::BuiltinValue(BuiltinFunction::Len)),
+            "push" => Ok(Object::BuiltinValue(BuiltinFunction::Push)),
+            _ => Err(EvalError::IdentifierNotFound(identifier.to_owned())),
+        }
+    }
+}
+
+impl fmt::Display for BuiltinFunction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            BuiltinFunction::Len => write!(f, "let"),
+            BuiltinFunction::Push => write!(f, "push"),
+        }
     }
 }
 

@@ -15,7 +15,8 @@ impl Environment {
         } else if let Some(outer) = &self.outer {
             Ok(outer.borrow().get(name)?)
         } else {
-            Err(EvalError::IdentifierNotFound(name.to_string()))
+            println!("orca madonna");
+            Err(EvalError::IdentifierNotFound(name.to_owned()))
         }
     }
 
