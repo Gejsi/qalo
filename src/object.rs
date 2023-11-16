@@ -66,7 +66,7 @@ impl BuiltinFunction {
 impl fmt::Display for BuiltinFunction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            BuiltinFunction::Len => write!(f, "let"),
+            BuiltinFunction::Len => write!(f, "len"),
             BuiltinFunction::Push => write!(f, "push"),
         }
     }

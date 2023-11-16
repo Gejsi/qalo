@@ -324,9 +324,10 @@ impl<'a> Evaluator<'a> {
                             .try_into()
                             .or_else(|err| return Err(ParserError::IntConversionError(err)))?,
                         _ => {
-                            return Err(EvalError::UnsupportedArgumentType(
-                                "`len` only retrieves the length of strings.".to_owned(),
-                            ))
+                            return Err(EvalError::UnsupportedArgumentType(format!(
+                                "`{}` only retrieves the length of strings.",
+                                BuiltinFunction::Len
+                            )))
                         }
                     };
 
