@@ -101,6 +101,9 @@ pub enum EvalError {
     #[error("Parsing error: {0}")]
     ParsingError(#[from] ParserError),
 
+    #[error("Unsupported argument type for built-in function: {0}")]
+    UnsupportedArgumentType(String),
+
     #[error("Unknown evaluation error")]
     Unknown,
 }

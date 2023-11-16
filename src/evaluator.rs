@@ -1,7 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
 
 use crate::{
-    ast::{Expression, Statement},
+    ast::{Expression, ParserError, Statement},
     environment::Environment,
     object::{BuiltinFunction, Closure, EvalError, Object},
     parser::Parser,
@@ -305,8 +305,32 @@ impl<'a> Evaluator<'a> {
 
             Object::BuiltinValue(builtin) => match builtin {
                 BuiltinFunction::Len => {
-                    println!("");
-                    Object::IntegerValue(2)
+                    if arguments.len() != 1 {
+                        return Err(EvalError::FunctionCallWrongArity(1, arguments.len() as u8));
+                    }
+
+                    // leave this map for now, will be probably replaced by a separate method
+                    let arguments = arguments
+                        .into_iter()
+                        .map(|arg| self.eval_expression(arg, false))
+                        .collect::<Result<Vec<Object>, EvalError>>()?;
+
+                    // unwrapping is fine, this argument surely exist before of the previous check
+                    let arg = arguments.get(0).unwrap();
+
+                    let length: i32 = match arg {
+                        Object::StringValue(text) => text
+                            .len()
+                            .try_into()
+                            .or_else(|err| return Err(ParserError::IntConversionError(err)))?,
+                        _ => {
+                            return Err(EvalError::UnsupportedArgumentType(
+                                "`len` only retrieves the length of strings.".to_owned(),
+                            ))
+                        }
+                    };
+
+                    Object::IntegerValue(length)
                 }
                 BuiltinFunction::Push => todo!(),
             },

@@ -1,4 +1,8 @@
-use std::{fmt, num::ParseIntError, rc::Rc};
+use std::{
+    fmt,
+    num::{ParseIntError, TryFromIntError},
+    rc::Rc,
+};
 
 use thiserror::Error;
 
@@ -163,8 +167,11 @@ pub enum ParserError {
     #[error("Semantic error: {0}")]
     SemanticError(String),
 
+    #[error("Failed to parse to a 32 bit integer: {0}")]
+    ParseIntError(#[from] ParseIntError),
+
     #[error("Failed to convert number to a 32 bit integer: {0}")]
-    IntConversionError(#[from] ParseIntError),
+    IntConversionError(#[from] TryFromIntError),
 
     #[error("Unknown parsing error")]
     Unknown,
