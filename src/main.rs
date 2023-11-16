@@ -4,8 +4,7 @@ use qalo::{evaluator::Evaluator, object::Object, parser::Parser};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let a = len("hello");
-        a;
+        len("hello");
     "#;
 
     // let mut parser = Parser::new(input);

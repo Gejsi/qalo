@@ -315,7 +315,7 @@ impl<'a> Evaluator<'a> {
                         .map(|arg| self.eval_expression(arg, false))
                         .collect::<Result<Vec<Object>, EvalError>>()?;
 
-                    // unwrapping is fine, this argument surely exist before of the previous check
+                    // unwrapping is fine, this element surely exist because of the previous check
                     let arg = arguments.get(0).unwrap();
 
                     let length: i32 = match arg {
@@ -332,6 +332,7 @@ impl<'a> Evaluator<'a> {
 
                     Object::IntegerValue(length)
                 }
+
                 BuiltinFunction::Push => todo!(),
             },
 
@@ -623,5 +624,17 @@ mod tests {
         let result = &evaluator.eval_program().unwrap();
         assert_eq!(&result[3], &Object::IntegerValue(4));
         assert_eq!(&result[4], &Object::IntegerValue(8));
+    }
+
+    #[test]
+    fn builtin_len() {
+        let input = r#"
+            len("hello");
+            len("");
+        "#;
+        let mut evaluator = Evaluator::new(input);
+        let result = &evaluator.eval_program().unwrap();
+        assert_eq!(&result[0], &Object::IntegerValue(5));
+        assert_eq!(&result[1], &Object::IntegerValue(0));
     }
 }
