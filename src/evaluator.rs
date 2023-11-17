@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
+use std::{cell::RefCell, fmt::Debug, rc::Rc};
 
 use crate::{
     ast::{Expression, ParserError, Statement},
@@ -127,6 +127,7 @@ impl<'a> Evaluator<'a> {
             Expression::FunctionExpression { parameters, body } => {
                 self.eval_function_expression(parameters, *body)?
             }
+            _ => todo!(),
         };
 
         // unwrap return values

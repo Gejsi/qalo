@@ -60,7 +60,7 @@ impl<'a> Lexer<'a> {
         &self.input[start..self.cur]
     }
 
-    // TODO: add support for different types of numbers; only ints are supported currently.
+    // TODO: add support for different types of numbers; only `i32`s are supported currently.
     pub fn eat_number(&mut self) -> &str {
         let start = self.cur;
 

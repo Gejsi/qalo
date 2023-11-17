@@ -31,11 +31,11 @@ impl<'a> Parser<'a> {
             lexer,
             cur: Rc::new(Token {
                 kind: TokenKind::Eof,
-                literal: "".to_string(),
+                literal: "".to_owned(),
             }),
             next: Rc::new(Token {
                 kind: TokenKind::Eof,
-                literal: "".to_string(),
+                literal: "".to_owned(),
             }),
         };
 
@@ -53,7 +53,7 @@ impl<'a> Parser<'a> {
             self.cur = self.next;
             self.next = self.lexer.next_token().into();
             ```
-            ... but respecting the borrow checker.
+            ...but respecting the borrow checker.
         */
         self.cur = std::mem::replace(&mut self.next, self.lexer.next_token().into());
     }
@@ -186,6 +186,8 @@ impl<'a> Parser<'a> {
 
             TokenKind::LeftParen => self.parse_grouped_expression()?,
 
+            TokenKind::LeftSquare => self.parse_array_expression()?,
+
             // parse unary expressions based on prefix token precedences
             TokenKind::Bang | TokenKind::Minus => self.parse_unary_expression()?,
 
@@ -194,6 +196,7 @@ impl<'a> Parser<'a> {
             TokenKind::Function => self.parse_function_expression()?,
 
             _ => {
+                println!("{:?}", self.cur);
                 return Err(ParserError::UnexpectedToken(self.cur.clone()));
             }
         };
@@ -252,7 +255,7 @@ impl<'a> Parser<'a> {
                 self.eat_token();
             } else if self.next.kind != TokenKind::RightParen {
                 return Err(ParserError::SyntaxError(
-                    "Expected comma between arguments".to_string(),
+                    "Expected comma between arguments".to_owned(),
                 ));
             }
         }
@@ -266,7 +269,7 @@ impl<'a> Parser<'a> {
         let expr = match self.cur.kind {
             TokenKind::RightParen => {
                 return Err(ParserError::SyntaxError(
-                    "Empty grouped expression '()' isn't allowed".to_string(),
+                    "Empty grouped expression '()' isn't allowed".to_owned(),
                 ))
             }
             _ => {
@@ -277,6 +280,28 @@ impl<'a> Parser<'a> {
         };
 
         Ok(Expression::GroupedExpression(Box::new(expr)))
+    }
+
+    // TODO: this works but it's too strict,
+    // as it doesn't let users write a trailing comma before the `]`
+    pub fn parse_array_expression(&mut self) -> Result<Expression, ParserError> {
+        let mut expressions: Vec<Expression> = vec![];
+
+        if self.next.kind == TokenKind::RightSquare {
+            self.eat_token();
+            return Ok(Expression::ArrayLiteral(expressions));
+        }
+
+        expressions.push(self.parse_expression(0, false)?);
+
+        while self.next.kind == TokenKind::Comma {
+            self.eat_token();
+            expressions.push(self.parse_expression(0, false)?);
+        }
+
+        self.expect_token(TokenKind::RightSquare)?;
+
+        Ok(Expression::ArrayLiteral(expressions))
     }
 
     pub fn parse_unary_expression(&mut self) -> Result<Expression, ParserError> {

@@ -65,6 +65,8 @@ pub enum Expression {
 
     StringLiteral(String),
 
+    ArrayLiteral(Vec<Expression>),
+
     BinaryExpression {
         left: Box<Expression>,
         operator: TokenKind,
@@ -98,30 +100,40 @@ pub enum Expression {
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Expression::Identifier(s) => write!(f, "{}", s),
-            Expression::IntegerLiteral(n) => write!(f, "{}", n),
-            Expression::BooleanLiteral(b) => write!(f, "{}", b),
-            Expression::StringLiteral(s) => write!(f, "\"{}\"", s),
+            Expression::Identifier(s) => write!(f, "{s}"),
+            Expression::IntegerLiteral(n) => write!(f, "{n}"),
+            Expression::BooleanLiteral(b) => write!(f, "{b}"),
+            Expression::StringLiteral(s) => write!(f, "\"{s}\""),
+            Expression::ArrayLiteral(elements) => {
+                write!(f, "[")?;
+                for (i, element) in elements.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{element}")?;
+                }
+                write!(f, "]")
+            }
             Expression::BinaryExpression {
                 left,
                 operator,
                 right,
             } => {
-                write!(f, "({} {} {})", left, operator, right)
+                write!(f, "({left} {operator} {right})")
             }
             Expression::UnaryExpression { operator, value } => {
-                write!(f, "({}{})", operator, value)
+                write!(f, "({operator}{value})")
             }
-            Expression::GroupedExpression(expr) => write!(f, "{}", expr),
+            Expression::GroupedExpression(expr) => write!(f, "{expr}"),
             Expression::CallExpression { path, arguments } => {
-                write!(f, "{}(", path)?;
+                write!(f, "{path}(")?;
 
                 for (i, arg) in arguments.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
 
-                    write!(f, "{}", arg)?;
+                    write!(f, "{arg}")?;
                 }
 
                 write!(f, ")")
