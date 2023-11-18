@@ -363,7 +363,7 @@ mod tests {
         "#;
 
         let num_vars = input.lines().count() - 2;
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new(input);
 
         (0..num_vars).for_each(|_| {
             parser.parse_var_statement().unwrap();
@@ -377,7 +377,7 @@ mod tests {
             return token;
         "#;
 
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new(input);
         parser.parse_return_statement().unwrap();
     }
 
@@ -387,7 +387,7 @@ mod tests {
             a + 2 * 2
         "#;
 
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new(input);
         parser.parse_expression_statement().unwrap();
     }
 
@@ -399,7 +399,7 @@ mod tests {
             { 2 + 2; }
         "#;
 
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new(input);
         parser.parse_block_statement().unwrap();
     }
 
@@ -412,7 +412,7 @@ mod tests {
             a + b
         "#;
 
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new(input);
         parser.parse_program().unwrap();
     }
 
@@ -462,7 +462,7 @@ mod tests {
 
         for test in tests {
             let (input, expected) = test;
-            let mut parser = Parser::new(&input);
+            let mut parser = Parser::new(input);
             let res = parser.parse_program().unwrap().to_string();
             assert_eq!(expected, res);
         }
@@ -481,7 +481,7 @@ mod tests {
             if true { 2 };
         "#;
 
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new(input);
         parser.parse_program().unwrap();
     }
 
@@ -497,7 +497,17 @@ mod tests {
             };
         "#;
 
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new(input);
+        parser.parse_program().unwrap();
+    }
+
+    #[test]
+    fn parse_array_expression() {
+        let input = r#"
+            [1, [3 + 3, fn(x) { x; }]]
+        "#;
+
+        let mut parser = Parser::new(input);
         parser.parse_program().unwrap();
     }
 }
