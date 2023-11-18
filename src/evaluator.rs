@@ -508,6 +508,21 @@ mod tests {
     }
 
     #[test]
+    fn eval_array_expression() {
+        let input = r#"
+            let add = fn(x, y) { return x + y; };
+            let foo = [1 + 1, add(2, 2)];
+            foo;
+        "#;
+        let mut evaluator = Evaluator::new(input);
+        let result = &evaluator.eval_program().unwrap()[2];
+        assert_eq!(
+            result,
+            &Object::ArrayValue(vec![Object::IntegerValue(2), Object::IntegerValue(4)])
+        );
+    }
+
+    #[test]
     fn eval_function_expression() {
         let input = r#"
             let foo = fn(x) {
