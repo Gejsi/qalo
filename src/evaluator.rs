@@ -107,6 +107,7 @@ impl<'a> Evaluator<'a> {
             Expression::BooleanLiteral(lit) => Object::BooleanValue(lit),
             Expression::StringLiteral(lit) => Object::StringValue(lit),
             Expression::Identifier(name) => self.env.borrow().get(&name)?,
+            Expression::ArrayLiteral(expressions) => self.eval_array_expression(expressions)?,
             Expression::BinaryExpression {
                 left,
                 operator,
@@ -127,7 +128,6 @@ impl<'a> Evaluator<'a> {
             Expression::FunctionExpression { parameters, body } => {
                 self.eval_function_expression(parameters, *body)?
             }
-            _ => todo!(),
         };
 
         // unwrap return values
@@ -219,6 +219,16 @@ impl<'a> Evaluator<'a> {
         };
 
         Ok(obj)
+    }
+
+    fn eval_array_expression(&mut self, expressions: Vec<Expression>) -> Result<Object, EvalError> {
+        let mut objects: Vec<Object> = vec![];
+
+        for expr in expressions {
+            objects.push(self.eval_expression(expr, false)?);
+        }
+
+        Ok(Object::ArrayValue(objects))
     }
 
     fn eval_if_expression(

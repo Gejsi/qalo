@@ -13,6 +13,7 @@ pub enum Object {
     IntegerValue(i32),
     BooleanValue(bool),
     StringValue(String),
+    ArrayValue(Vec<Object>),
     ReturnValue(Box<Object>),
     FunctionValue(Closure),
     BuiltinValue(BuiltinFunction),
@@ -25,6 +26,16 @@ impl fmt::Display for Object {
             Object::IntegerValue(value) => write!(f, "{value}"),
             Object::BooleanValue(value) => write!(f, "{value}"),
             Object::StringValue(value) => write!(f, "\"{value}\""),
+            Object::ArrayValue(elements) => {
+                write!(f, "[")?;
+                for (i, element) in elements.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{element}")?;
+                }
+                write!(f, "]")
+            }
             Object::FunctionValue(value) => write!(f, "{value}"),
             Object::ReturnValue(value) => write!(f, "return {value}"),
             Object::BuiltinValue(value) => write!(f, "built-in function {value}"),
