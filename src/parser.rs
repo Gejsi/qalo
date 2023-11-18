@@ -196,7 +196,6 @@ impl<'a> Parser<'a> {
             TokenKind::Function => self.parse_function_expression()?,
 
             _ => {
-                println!("{:?}", self.cur);
                 return Err(ParserError::UnexpectedToken(self.cur.clone()));
             }
         };
@@ -245,22 +244,7 @@ impl<'a> Parser<'a> {
     pub fn parse_call_expression(&mut self) -> Result<Expression, ParserError> {
         let path = self.cur.literal.clone();
         self.expect_token(TokenKind::LeftParen)?;
-
-        let mut arguments: Vec<Expression> = vec![];
-        while self.next.kind != TokenKind::RightParen {
-            let value = self.parse_expression(0, false)?;
-            arguments.push(value);
-
-            if self.next.kind == TokenKind::Comma {
-                self.eat_token();
-            } else if self.next.kind != TokenKind::RightParen {
-                return Err(ParserError::SyntaxError(
-                    "Expected comma between arguments".to_owned(),
-                ));
-            }
-        }
-
-        self.expect_token(TokenKind::RightParen)?;
+        let arguments = self.parse_expression_list(TokenKind::RightParen)?;
         Ok(Expression::CallExpression { path, arguments })
     }
 
@@ -282,26 +266,30 @@ impl<'a> Parser<'a> {
         Ok(Expression::GroupedExpression(Box::new(expr)))
     }
 
-    // TODO: this works but it's too strict,
-    // as it doesn't let users write a trailing comma before the `]`
     pub fn parse_array_expression(&mut self) -> Result<Expression, ParserError> {
+        let expressions = self.parse_expression_list(TokenKind::RightSquare)?;
+        Ok(Expression::ArrayLiteral(expressions))
+    }
+
+    /// Parse comma separated list of expressions. Supports trailing commas before the final token.
+    fn parse_expression_list(&mut self, end: TokenKind) -> Result<Vec<Expression>, ParserError> {
         let mut expressions: Vec<Expression> = vec![];
 
-        if self.next.kind == TokenKind::RightSquare {
-            self.eat_token();
-            return Ok(Expression::ArrayLiteral(expressions));
-        }
-
-        expressions.push(self.parse_expression(0, false)?);
-
-        while self.next.kind == TokenKind::Comma {
-            self.eat_token();
+        while self.next.kind != end {
             expressions.push(self.parse_expression(0, false)?);
+
+            if self.next.kind == TokenKind::Comma {
+                self.eat_token();
+            } else if self.next.kind != end {
+                return Err(ParserError::SyntaxError(
+                    "Expected comma between arguments".to_owned(),
+                ));
+            }
         }
 
-        self.expect_token(TokenKind::RightSquare)?;
+        self.expect_token(end)?;
 
-        Ok(Expression::ArrayLiteral(expressions))
+        Ok(expressions)
     }
 
     pub fn parse_unary_expression(&mut self) -> Result<Expression, ParserError> {

@@ -4,7 +4,7 @@ use qalo::{evaluator::Evaluator, lexer::Lexer, object::Object, parser::Parser, t
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        [1, fn(x) { x; }, [3 + 3]];
+        len("man", 2)
     "#;
 
     // let mut lexer = Lexer::new(input);
