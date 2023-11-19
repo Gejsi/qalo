@@ -6,13 +6,6 @@ use crate::{
     token::{Token, TokenKind},
 };
 
-#[derive(Debug)]
-pub struct Parser<'a> {
-    pub lexer: Lexer<'a>,
-    pub cur: Rc<Token>,
-    pub next: Rc<Token>,
-}
-
 /// Represents the binding power of a token.
 /// For example, the precedences of these operators:
 /// a   +   b   *   c   *   d   +   e
@@ -22,6 +15,13 @@ pub enum Precedence {
     Infix(u8, u8),
     Prefix(u8),
     Postfix(u8),
+}
+
+#[derive(Debug)]
+pub struct Parser<'a> {
+    pub lexer: Lexer<'a>,
+    pub cur: Rc<Token>,
+    pub next: Rc<Token>,
 }
 
 impl<'a> Parser<'a> {
@@ -152,16 +152,16 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn postfix_precedence(op: &TokenKind) -> Option<Precedence> {
+    fn prefix_precedence(op: &TokenKind) -> Option<Precedence> {
         match op {
-            TokenKind::LeftSquare | TokenKind::LeftParen => Some(Precedence::Postfix(8)),
+            TokenKind::Bang | TokenKind::Minus => Some(Precedence::Prefix(8)),
             _ => None,
         }
     }
 
-    fn prefix_precedence(op: &TokenKind) -> Option<Precedence> {
+    fn postfix_precedence(op: &TokenKind) -> Option<Precedence> {
         match op {
-            TokenKind::Bang | TokenKind::Minus => Some(Precedence::Prefix(9)),
+            TokenKind::LeftSquare | TokenKind::LeftParen => Some(Precedence::Postfix(9)),
             _ => None,
         }
     }
@@ -210,9 +210,9 @@ impl<'a> Parser<'a> {
             }
         };
 
-        // Pratt parsing uses both a loop and recursion to handle grouping based on precedences.
+        // Pratt parsing uses both a *loop* and *recursion* to handle grouping based on precedences.
         loop {
-            // parse postfix expressions
+            // parse expressions based on postfix precedences
             if let Some(Precedence::Postfix(postfix_prec)) =
                 Self::postfix_precedence(&self.next.kind)
             {
@@ -220,6 +220,7 @@ impl<'a> Parser<'a> {
                     break;
                 }
 
+                println!("{expr}");
                 self.eat_token();
 
                 expr = match self.cur.kind {
@@ -231,7 +232,7 @@ impl<'a> Parser<'a> {
                             ));
                         }
 
-                        let index = Box::new(self.parse_expression(min_prec, false)?);
+                        let index = Box::new(self.parse_expression(0, false)?);
                         self.expect_token(TokenKind::RightSquare)?;
 
                         Expression::IndexExpression {

@@ -5,7 +5,7 @@ use qalo::{evaluator::Evaluator, lexer::Lexer, object::Object, parser::Parser, t
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
         let a = [100, 200, 300, 400];
-        a[1 + 1];
+        1 + !-a[10 + 20 * 30];
     "#;
 
     // let mut lexer = Lexer::new(input);
@@ -18,16 +18,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     //     }
     // }
 
-    // let mut parser = Parser::new(input);
-    // let program = parser.parse_program().unwrap();
-    // println!("{program:#?}");
+    let mut parser = Parser::new(input);
+    let program = parser.parse_program().unwrap();
+    println!("{program:#?}");
 
-    let mut evaluator = Evaluator::new(input);
-    for obj in evaluator.eval_program()? {
-        // if !matches!(obj, Object::UnitValue) {
-        // }
-        println!("{obj}");
-    }
+    // let mut evaluator = Evaluator::new(input);
+    // for obj in evaluator.eval_program()? {
+    //     println!("{obj}");
+    // }
 
     Ok(())
 }
