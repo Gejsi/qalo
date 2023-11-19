@@ -4,9 +4,8 @@ use qalo::{evaluator::Evaluator, lexer::Lexer, object::Object, parser::Parser, t
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let add = fn(x, y) { return x + y; };
-        let a = [1 + 1, add(2, 2)];
-        a;
+        let a = [100, 200, 300, 400];
+        a[1 + 1];
     "#;
 
     // let mut lexer = Lexer::new(input);

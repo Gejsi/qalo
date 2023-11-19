@@ -78,10 +78,15 @@ pub enum Expression {
         value: Box<Expression>,
     },
 
+    IndexExpression {
+        value: Box<Expression>,
+        index: Box<Expression>,
+    },
+
     GroupedExpression(Box<Expression>),
 
     CallExpression {
-        path: String,
+        path: Box<Expression>,
         arguments: Vec<Expression>,
     },
 
@@ -123,6 +128,9 @@ impl fmt::Display for Expression {
             }
             Expression::UnaryExpression { operator, value } => {
                 write!(f, "({operator}{value})")
+            }
+            Expression::IndexExpression { value, index } => {
+                write!(f, "({value}[{index}])")
             }
             Expression::GroupedExpression(expr) => write!(f, "{expr}"),
             Expression::CallExpression { path, arguments } => {
@@ -182,7 +190,7 @@ pub enum ParserError {
     #[error("Failed to parse to a 32 bit integer: {0}")]
     ParseIntError(#[from] ParseIntError),
 
-    #[error("Failed to convert number to a 32 bit integer: {0}")]
+    #[error("Integral type conversion failed: {0}")]
     IntConversionError(#[from] TryFromIntError),
 
     #[error("Unknown parsing error")]

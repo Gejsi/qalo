@@ -68,7 +68,7 @@ impl<'a> Evaluator<'a> {
                     if let Statement::ReturnStatement(expr) = statement {
                         let expr_eval = self.eval_expression(expr, true)?;
 
-                        // if the result of the evaluation is a *return value* itself, unwrap it...
+                        // if the result of the evaluation is a *return value*, unwrap it first...
                         if let Object::ReturnValue(inner_obj) = expr_eval {
                             obj = Object::ReturnValue(Box::new(*inner_obj));
                         } else {
@@ -118,7 +118,10 @@ impl<'a> Evaluator<'a> {
             }
             Expression::GroupedExpression(expr) => self.eval_expression(*expr, within_statement)?,
             Expression::CallExpression { path, arguments } => {
-                self.eval_call_expression(path, arguments)?
+                self.eval_call_expression(*path, arguments)?
+            }
+            Expression::IndexExpression { value, index } => {
+                self.eval_index_expression(*value, *index)?
             }
             Expression::IfExpression {
                 condition,
@@ -231,6 +234,33 @@ impl<'a> Evaluator<'a> {
         Ok(Object::ArrayValue(objects))
     }
 
+    fn eval_index_expression(
+        &mut self,
+        value: Expression,
+        index: Expression,
+    ) -> Result<Object, EvalError> {
+        let value = self.eval_expression(value, false)?;
+        let index = self.eval_expression(index, false)?;
+
+        match value {
+            Object::ArrayValue(objects) => {
+                if let Object::IntegerValue(index) = index {
+                    let id = usize::try_from(index)
+                        .or_else(|err| return Err(ParserError::IntConversionError(err)))?;
+
+                    let item = objects
+                        .get(id)
+                        .ok_or(EvalError::IndexOutOfBounds(objects.len(), id))?;
+
+                    Ok(item.clone())
+                } else {
+                    return Err(EvalError::InvalidIndexType);
+                }
+            }
+            _ => return Err(EvalError::InvalidIndexUsage),
+        }
+    }
+
     fn eval_if_expression(
         &mut self,
         condition: Expression,
@@ -273,9 +303,11 @@ impl<'a> Evaluator<'a> {
 
     fn eval_call_expression(
         &mut self,
-        path: String,
+        path: Expression,
         arguments: Vec<Expression>,
     ) -> Result<Object, EvalError> {
+        // FIX: remove temporary `.to_string()`
+        let path = self.eval_expression(path, false)?.to_string();
         let function =
             BuiltinFunction::lookup_function(&path).or_else(|_| self.env.borrow().get(&path))?;
 
@@ -520,6 +552,17 @@ mod tests {
             result,
             &Object::ArrayValue(vec![Object::IntegerValue(2), Object::IntegerValue(4)])
         );
+    }
+
+    #[test]
+    fn eval_index_expression() {
+        let input = r#"
+            let a = [100, 200, 300, 400];
+            a[1 + 1];
+        "#;
+        let mut evaluator = Evaluator::new(input);
+        let result = &evaluator.eval_program().unwrap()[1];
+        assert_eq!(result, &Object::IntegerValue(300));
     }
 
     #[test]

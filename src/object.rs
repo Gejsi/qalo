@@ -115,6 +115,15 @@ pub enum EvalError {
     #[error("Unsupported argument type for built-in function: {0}")]
     UnsupportedArgumentType(String),
 
+    #[error("Only arrays can be accessed through the index operator")]
+    InvalidIndexUsage,
+
+    #[error("This structure cannot be accessed with such type.")]
+    InvalidIndexType,
+
+    #[error("This structure has {0} elements but the index {1} is out of bounds.")]
+    IndexOutOfBounds(usize, usize),
+
     #[error("Unknown evaluation error")]
     Unknown,
 }

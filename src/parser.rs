@@ -13,14 +13,15 @@ pub struct Parser<'a> {
     pub next: Rc<Token>,
 }
 
-/// Represents the binding power of a token (e.g. operators).
-/// For example:
+/// Represents the binding power of a token.
+/// For example, the precedences of these operators:
 /// a   +   b   *   c   *   d   +   e
 ///. 1   2   3   4   3   4   1   2
 #[derive(Debug)]
 pub enum Precedence {
     Infix(u8, u8),
     Prefix(u8),
+    Postfix(u8),
 }
 
 impl<'a> Parser<'a> {
@@ -151,9 +152,16 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn postfix_precedence(op: &TokenKind) -> Option<Precedence> {
+        match op {
+            TokenKind::LeftSquare | TokenKind::LeftParen => Some(Precedence::Postfix(8)),
+            _ => None,
+        }
+    }
+
     fn prefix_precedence(op: &TokenKind) -> Option<Precedence> {
         match op {
-            TokenKind::Bang | TokenKind::Minus => Some(Precedence::Prefix(8)),
+            TokenKind::Bang | TokenKind::Minus => Some(Precedence::Prefix(9)),
             _ => None,
         }
     }
@@ -184,9 +192,11 @@ impl<'a> Parser<'a> {
                 }
             }
 
-            TokenKind::LeftParen => self.parse_grouped_expression()?,
+            TokenKind::LeftSquare => {
+                Expression::ArrayLiteral(self.parse_expression_list(TokenKind::RightSquare)?)
+            }
 
-            TokenKind::LeftSquare => self.parse_array_expression()?,
+            TokenKind::LeftParen => self.parse_grouped_expression()?,
 
             // parse unary expressions based on prefix token precedences
             TokenKind::Bang | TokenKind::Minus => self.parse_unary_expression()?,
@@ -201,48 +211,89 @@ impl<'a> Parser<'a> {
         };
 
         // Pratt parsing uses both a loop and recursion to handle grouping based on precedences.
-        while let Some(Precedence::Infix(left_prec, right_prec)) =
-            Self::infix_precedence(&self.next.kind)
-        {
-            // parse binary expressions based on infix operators precedences
-            if left_prec < min_prec {
-                break;
+        loop {
+            // parse postfix expressions
+            if let Some(Precedence::Postfix(postfix_prec)) =
+                Self::postfix_precedence(&self.next.kind)
+            {
+                if postfix_prec < min_prec {
+                    break;
+                }
+
+                self.eat_token();
+
+                expr = match self.cur.kind {
+                    TokenKind::LeftSquare => {
+                        if self.next.kind == TokenKind::RightSquare {
+                            return Err(ParserError::SyntaxError(
+                                "Define a valid index to access this structure (e.g. array[0])."
+                                    .to_owned(),
+                            ));
+                        }
+
+                        let index = Box::new(self.parse_expression(min_prec, false)?);
+                        self.expect_token(TokenKind::RightSquare)?;
+
+                        Expression::IndexExpression {
+                            value: Box::new(expr),
+                            index,
+                        }
+                    }
+                    _ => {
+                        return Err(ParserError::UnexpectedToken(self.cur.clone()));
+                    }
+                };
+
+                continue;
             }
 
-            self.eat_token();
-            let operator = self.cur.kind.clone();
+            // parse binary expressions based on infix operators precedences
+            if let Some(Precedence::Infix(left_prec, right_prec)) =
+                Self::infix_precedence(&self.next.kind)
+            {
+                if left_prec < min_prec {
+                    break;
+                }
 
-            expr = match self.cur.kind {
-                TokenKind::Plus
-                | TokenKind::Minus
-                | TokenKind::Slash
-                | TokenKind::Asterisk
-                | TokenKind::Percentage
-                | TokenKind::Equal
-                | TokenKind::NotEqual
-                | TokenKind::LessThan
-                | TokenKind::GreaterThan
-                | TokenKind::LessThanEqual
-                | TokenKind::GreaterThanEqual => {
-                    let right = self.parse_expression(right_prec, false)?;
+                self.eat_token();
+                let operator = self.cur.kind.clone();
 
-                    Expression::BinaryExpression {
-                        left: Box::new(expr),
-                        operator,
-                        right: Box::new(right),
+                expr = match self.cur.kind {
+                    TokenKind::Plus
+                    | TokenKind::Minus
+                    | TokenKind::Slash
+                    | TokenKind::Asterisk
+                    | TokenKind::Percentage
+                    | TokenKind::Equal
+                    | TokenKind::NotEqual
+                    | TokenKind::LessThan
+                    | TokenKind::GreaterThan
+                    | TokenKind::LessThanEqual
+                    | TokenKind::GreaterThanEqual => {
+                        let right = self.parse_expression(right_prec, false)?;
+
+                        Expression::BinaryExpression {
+                            left: Box::new(expr),
+                            operator,
+                            right: Box::new(right),
+                        }
                     }
-                }
-                _ => {
-                    return Err(ParserError::UnexpectedToken(self.cur.clone()));
-                }
-            };
+                    _ => {
+                        return Err(ParserError::UnexpectedToken(self.cur.clone()));
+                    }
+                };
+
+                continue;
+            }
+
+            break;
         }
 
         Ok(expr)
     }
 
     pub fn parse_call_expression(&mut self) -> Result<Expression, ParserError> {
-        let path = self.cur.literal.clone();
+        let path = Box::new(self.parse_expression(0, false)?);
         self.expect_token(TokenKind::LeftParen)?;
         let arguments = self.parse_expression_list(TokenKind::RightParen)?;
         Ok(Expression::CallExpression { path, arguments })
@@ -264,11 +315,6 @@ impl<'a> Parser<'a> {
         };
 
         Ok(Expression::GroupedExpression(Box::new(expr)))
-    }
-
-    pub fn parse_array_expression(&mut self) -> Result<Expression, ParserError> {
-        let expressions = self.parse_expression_list(TokenKind::RightSquare)?;
-        Ok(Expression::ArrayLiteral(expressions))
     }
 
     /// Parse comma separated list of expressions. Supports trailing commas before the final token.
@@ -295,11 +341,11 @@ impl<'a> Parser<'a> {
     pub fn parse_unary_expression(&mut self) -> Result<Expression, ParserError> {
         let operator = self.cur.kind.clone();
 
-        let Some(Precedence::Prefix(prec)) = Self::prefix_precedence(&self.cur.kind) else {
+        let Some(Precedence::Prefix(prefix_prec)) = Self::prefix_precedence(&self.cur.kind) else {
             unreachable!();
         };
 
-        let value = Box::new(self.parse_expression(prec, false)?);
+        let value = Box::new(self.parse_expression(prefix_prec, false)?);
 
         Ok(Expression::UnaryExpression { operator, value })
     }
