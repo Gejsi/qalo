@@ -125,7 +125,7 @@ impl<'a> Parser<'a> {
     pub fn parse_expression_statement(&mut self) -> Result<Statement, ParserError> {
         let expr = self.parse_expression(0, true)?;
 
-        // make semicolon optional
+        // make semicolons optional
         if self.next.kind == TokenKind::Semicolon {
             self.eat_token();
         }
@@ -183,14 +183,7 @@ impl<'a> Parser<'a> {
             TokenKind::True => Expression::BooleanLiteral(true),
             TokenKind::False => Expression::BooleanLiteral(false),
             TokenKind::String => Expression::StringLiteral(self.cur.literal.clone()),
-
-            TokenKind::Identifier => {
-                if self.next.kind == TokenKind::LeftParen {
-                    self.parse_call_expression()?
-                } else {
-                    Expression::Identifier(self.cur.literal.clone())
-                }
-            }
+            TokenKind::Identifier => Expression::Identifier(self.cur.literal.clone()),
 
             TokenKind::LeftSquare => {
                 Expression::ArrayLiteral(self.parse_expression_list(TokenKind::RightSquare)?)
@@ -220,14 +213,13 @@ impl<'a> Parser<'a> {
                     break;
                 }
 
-                println!("{expr}");
                 self.eat_token();
 
                 expr = match self.cur.kind {
                     TokenKind::LeftSquare => {
                         if self.next.kind == TokenKind::RightSquare {
                             return Err(ParserError::SyntaxError(
-                                "Define a valid index to access this structure (e.g. array[0])."
+                                "Define a valid index to access this structure (e.g., array[0])."
                                     .to_owned(),
                             ));
                         }
@@ -240,6 +232,16 @@ impl<'a> Parser<'a> {
                             index,
                         }
                     }
+
+                    TokenKind::LeftParen => {
+                        let arguments = self.parse_expression_list(TokenKind::RightParen)?;
+
+                        Expression::CallExpression {
+                            path: Box::new(expr),
+                            arguments,
+                        }
+                    }
+
                     _ => {
                         return Err(ParserError::UnexpectedToken(self.cur.clone()));
                     }
@@ -291,13 +293,6 @@ impl<'a> Parser<'a> {
         }
 
         Ok(expr)
-    }
-
-    pub fn parse_call_expression(&mut self) -> Result<Expression, ParserError> {
-        let path = Box::new(self.parse_expression(0, false)?);
-        self.expect_token(TokenKind::LeftParen)?;
-        let arguments = self.parse_expression_list(TokenKind::RightParen)?;
-        Ok(Expression::CallExpression { path, arguments })
     }
 
     pub fn parse_grouped_expression(&mut self) -> Result<Expression, ParserError> {
