@@ -4,21 +4,23 @@ use qalo::{evaluator::Evaluator, lexer::Lexer, object::Object, parser::Parser, t
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let map = fn(arr, f) {
-            let iter = fn(arr, accumulated) {
-                if (len(arr) == 0) {
-                    accumulated
+        let reduce = fn(arr, initial, f) {
+            let iter = fn(arr, result) {
+                if len(arr) == 0 {
+                    result
                 } else {
-                    iter(rest(arr), append(accumulated, f(arr[0])));
+                    iter(rest(arr), f(result, arr[0]));
                 }
             };
 
-            iter(arr, []);
+            iter(arr, initial);
         };
 
-        let arr = [1, 2, 3, 4];
-        let double = fn(x) { x * 2 };
-        map(arr, double);
+        let sum = fn(arr) {
+            return reduce(arr, 0, fn(initial, el) { initial + el });
+        };
+
+        sum([1, 2, 3, 4, 5]);
     "#;
 
     // let mut lexer = Lexer::new(input);

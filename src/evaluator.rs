@@ -793,7 +793,7 @@ mod tests {
         let input = r#"
             let map = fn(arr, f) {
                 let iter = fn(arr, accumulated) {
-                    if (len(arr) == 0) {
+                    if len(arr) == 0 {
                         accumulated
                     } else {
                         iter(rest(arr), append(accumulated, f(arr[0])));
@@ -818,5 +818,31 @@ mod tests {
                 Object::IntegerValue(8)
             ])
         );
+    }
+
+    #[test]
+    fn custom_reduce() {
+        let input = r#"
+            let reduce = fn(arr, initial, f) {
+                let iter = fn(arr, result) {
+                    if len(arr) == 0 {
+                        result
+                    } else {
+                        iter(rest(arr), f(result, arr[0]));
+                    }
+                };
+
+                iter(arr, initial);
+            };
+
+            let sum = fn(arr) {
+                return reduce(arr, 0, fn(initial, el) { initial + el });
+            };
+
+            sum([1, 2, 3, 4, 5]);
+        "#;
+        let mut evaluator = Evaluator::new(input);
+        let result = &evaluator.eval_program().unwrap();
+        assert_eq!(&result[2], &Object::IntegerValue(15));
     }
 }
