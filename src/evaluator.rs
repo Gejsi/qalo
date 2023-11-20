@@ -774,4 +774,49 @@ mod tests {
             ])
         );
     }
+
+    #[test]
+    fn builtin_rest() {
+        let input = r#"
+            rest([1, 2, 3]);
+        "#;
+        let mut evaluator = Evaluator::new(input);
+        let result = &evaluator.eval_program().unwrap();
+        assert_eq!(
+            &result[0],
+            &Object::ArrayValue(vec![Object::IntegerValue(2), Object::IntegerValue(3)])
+        );
+    }
+
+    #[test]
+    fn custom_map() {
+        let input = r#"
+            let map = fn(arr, f) {
+                let iter = fn(arr, accumulated) {
+                    if (len(arr) == 0) {
+                        accumulated
+                    } else {
+                        iter(rest(arr), append(accumulated, f(arr[0])));
+                    }
+                };
+
+                iter(arr, []);
+            };
+
+            let arr = [1, 2, 3, 4];
+            let double = fn(x) { x * 2 };
+            map(arr, double);
+        "#;
+        let mut evaluator = Evaluator::new(input);
+        let result = &evaluator.eval_program().unwrap();
+        assert_eq!(
+            &result[3],
+            &Object::ArrayValue(vec![
+                Object::IntegerValue(2),
+                Object::IntegerValue(4),
+                Object::IntegerValue(6),
+                Object::IntegerValue(8)
+            ])
+        );
+    }
 }
