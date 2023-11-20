@@ -592,7 +592,7 @@ mod tests {
             ("let double = fn(x) { x * 2; }; double(5);", 10),
             ("let add = fn(x, y) { x + y; }; add(5, 5);", 10),
             ("let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20),
-            // ("fn(x) { x; }(5)", 5),
+            ("1; fn(x) { x; }(5)", 5),
         ];
 
         for (input, expected) in tests {

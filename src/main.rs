@@ -4,8 +4,7 @@ use qalo::{evaluator::Evaluator, lexer::Lexer, object::Object, parser::Parser, t
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let foo = [fn() { 1; }];
-        foo[0]();
+    a * [1, 2, 3, 4][b * c] * d
     "#;
 
     // let mut lexer = Lexer::new(input);
@@ -18,14 +17,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     //     }
     // }
 
-    // let mut parser = Parser::new(input);
-    // let program = parser.parse_program()?;
-    // println!("{program:#?}");
+    let mut parser = Parser::new(input);
+    let program = parser.parse_program()?;
+    println!("{program}");
 
-    let mut evaluator = Evaluator::new(input);
-    for obj in evaluator.eval_program()? {
-        println!("{obj}");
-    }
+    // let mut evaluator = Evaluator::new(input);
+    // for obj in evaluator.eval_program()? {
+    //     println!("{obj}");
+    // }
 
     Ok(())
 }
