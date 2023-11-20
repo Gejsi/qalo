@@ -69,9 +69,8 @@ impl<'a> Evaluator<'a> {
                         let expr_eval = self.eval_expression(expr, true)?;
 
                         // if the result of the evaluation is a *return value*, unwrap it first...
-                        // TODO: use `matches` to simplify this code
-                        if let Object::ReturnValue(inner_obj) = expr_eval {
-                            obj = Object::ReturnValue(Box::new(*inner_obj));
+                        if matches!(expr_eval, Object::ReturnValue(_)) {
+                            obj = expr_eval;
                         } else {
                             // ...otherwise, wrap the value inside a *return value*
                             obj = Object::ReturnValue(Box::new(expr_eval));
@@ -329,10 +328,7 @@ impl<'a> Evaluator<'a> {
                 }
 
                 // evaluate arguments in the current scope
-                let arguments = arguments
-                    .into_iter()
-                    .map(|arg| self.eval_expression(arg, false))
-                    .collect::<Result<Vec<Object>, EvalError>>()?;
+                let arguments = self.eval_call_expression_arguments(arguments)?;
 
                 // switch to the closure environment
                 let outer_env = std::mem::replace(&mut self.env, env);
@@ -356,11 +352,7 @@ impl<'a> Evaluator<'a> {
                         return Err(EvalError::FunctionCallWrongArity(1, arguments.len() as u8));
                     }
 
-                    // leave this map for now, will be probably replaced by a separate method
-                    let arguments = arguments
-                        .into_iter()
-                        .map(|arg| self.eval_expression(arg, false))
-                        .collect::<Result<Vec<Object>, EvalError>>()?;
+                    let arguments = self.eval_call_expression_arguments(arguments)?;
 
                     // unwrapping is fine, this element surely exist because of the previous check
                     let arg = arguments.get(0).unwrap();
@@ -378,7 +370,7 @@ impl<'a> Evaluator<'a> {
 
                         _ => {
                             return Err(EvalError::UnsupportedArgumentType(format!(
-                                "`{}` only retrieves the length of strings and arrays.",
+                                "`{}` only retrieves the length of strings and arrays",
                                 BuiltinFunction::Len
                             )));
                         }
@@ -387,7 +379,25 @@ impl<'a> Evaluator<'a> {
                     Object::IntegerValue(length)
                 }
 
-                BuiltinFunction::Push => todo!(),
+                BuiltinFunction::Append => {
+                    if arguments.len() < 2 {
+                        return Err(EvalError::FunctionCallWrongArity(2, arguments.len() as u8));
+                    }
+
+                    let mut arguments = self.eval_call_expression_arguments(arguments)?;
+                    let (first, rest) = arguments.split_first_mut().unwrap();
+
+                    if let Object::ArrayValue(objects) = first {
+                        objects.extend_from_slice(rest);
+                        // return a new array, rather than modifying the existing one
+                        Object::ArrayValue(objects.clone())
+                    } else {
+                        return Err(EvalError::UnsupportedArgumentType(format!(
+                            "`{}` only works on arrays",
+                            BuiltinFunction::Append
+                        )));
+                    }
+                }
             },
 
             other => {
@@ -398,6 +408,16 @@ impl<'a> Evaluator<'a> {
         };
 
         Ok(obj)
+    }
+
+    fn eval_call_expression_arguments(
+        &mut self,
+        arguments: Vec<Expression>,
+    ) -> Result<Vec<Object>, EvalError> {
+        Ok(arguments
+            .into_iter()
+            .map(|arg| self.eval_expression(arg, false))
+            .collect::<Result<Vec<Object>, EvalError>>()?)
     }
 
     /// Creates a new environment linked to the outer environment
@@ -715,5 +735,24 @@ mod tests {
         let result = &evaluator.eval_program().unwrap();
         assert_eq!(&result[0], &Object::IntegerValue(5));
         assert_eq!(&result[1], &Object::IntegerValue(0));
+    }
+
+    #[test]
+    fn builtin_append() {
+        let input = r#"
+            append([1, 2, 3], 100, 200);
+        "#;
+        let mut evaluator = Evaluator::new(input);
+        let result = &evaluator.eval_program().unwrap();
+        assert_eq!(
+            &result[0],
+            &Object::ArrayValue(vec![
+                Object::IntegerValue(1),
+                Object::IntegerValue(2),
+                Object::IntegerValue(3),
+                Object::IntegerValue(100),
+                Object::IntegerValue(200),
+            ])
+        );
     }
 }

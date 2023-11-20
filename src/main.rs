@@ -4,8 +4,7 @@ use qalo::{evaluator::Evaluator, lexer::Lexer, object::Object, parser::Parser, t
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let a = [1, 2, 3];
-        len(a);
+        append([1, 2, 3], 100, 200, "man");
     "#;
 
     // let mut lexer = Lexer::new(input);
@@ -24,7 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut evaluator = Evaluator::new(input);
     for obj in evaluator.eval_program()? {
-        println!("{obj}");
+        println!("{obj:?}");
     }
 
     Ok(())

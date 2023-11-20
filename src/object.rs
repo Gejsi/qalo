@@ -60,7 +60,7 @@ impl fmt::Display for Closure {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum BuiltinFunction {
     Len,
-    Push,
+    Append,
 }
 
 impl BuiltinFunction {
@@ -68,7 +68,7 @@ impl BuiltinFunction {
     pub fn lookup_function(identifier: &str) -> Result<Object, EvalError> {
         match identifier {
             "len" => Ok(Object::BuiltinValue(BuiltinFunction::Len)),
-            "push" => Ok(Object::BuiltinValue(BuiltinFunction::Push)),
+            "append" => Ok(Object::BuiltinValue(BuiltinFunction::Append)),
             _ => Err(EvalError::IdentifierNotFound(identifier.to_owned())),
         }
     }
@@ -78,7 +78,7 @@ impl fmt::Display for BuiltinFunction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             BuiltinFunction::Len => write!(f, "len"),
-            BuiltinFunction::Push => write!(f, "push"),
+            BuiltinFunction::Append => write!(f, "push"),
         }
     }
 }
