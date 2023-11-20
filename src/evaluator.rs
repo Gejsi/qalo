@@ -353,7 +353,6 @@ impl<'a> Evaluator<'a> {
                     }
 
                     let arguments = self.eval_call_expression_arguments(arguments)?;
-
                     // unwrapping is fine, this element surely exist because of the previous check
                     let arg = arguments.get(0).unwrap();
 
@@ -391,6 +390,26 @@ impl<'a> Evaluator<'a> {
                         objects.extend_from_slice(rest);
                         // return a new array, rather than modifying the existing one
                         Object::ArrayValue(objects.clone())
+                    } else {
+                        return Err(EvalError::UnsupportedArgumentType(format!(
+                            "`{}` only works on arrays",
+                            BuiltinFunction::Append
+                        )));
+                    }
+                }
+
+                BuiltinFunction::Rest => {
+                    if arguments.len() != 1 {
+                        return Err(EvalError::FunctionCallWrongArity(1, arguments.len() as u8));
+                    }
+
+                    let arguments = self.eval_call_expression_arguments(arguments)?;
+                    // unwrapping is fine, this element surely exist because of the previous check
+                    let arg = arguments.get(0).unwrap();
+
+                    if let Object::ArrayValue(objects) = arg {
+                        // return a new array, rather than modifying the existing one
+                        Object::ArrayValue(objects[1..].to_vec())
                     } else {
                         return Err(EvalError::UnsupportedArgumentType(format!(
                             "`{}` only works on arrays",
