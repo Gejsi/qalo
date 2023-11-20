@@ -69,6 +69,7 @@ impl<'a> Evaluator<'a> {
                         let expr_eval = self.eval_expression(expr, true)?;
 
                         // if the result of the evaluation is a *return value*, unwrap it first...
+                        // TODO: use `matches` to simplify this code
                         if let Object::ReturnValue(inner_obj) = expr_eval {
                             obj = Object::ReturnValue(Box::new(*inner_obj));
                         } else {
@@ -306,10 +307,13 @@ impl<'a> Evaluator<'a> {
         path: Expression,
         arguments: Vec<Expression>,
     ) -> Result<Object, EvalError> {
-        // FIX: remove temporary `.to_string()`
-        let path = self.eval_expression(path, false)?.to_string();
-        let function =
-            BuiltinFunction::lookup_function(&path).or_else(|_| self.env.borrow().get(&path))?;
+        let function = match path {
+            Expression::Identifier(path) => {
+                // built-in functions are searched through before user-defined ones
+                BuiltinFunction::lookup_function(&path).or_else(|_| self.env.borrow().get(&path))?
+            }
+            expr => self.eval_expression(expr, false)?,
+        };
 
         let obj = match function {
             Object::FunctionValue(Closure {
@@ -370,7 +374,7 @@ impl<'a> Evaluator<'a> {
                             return Err(EvalError::UnsupportedArgumentType(format!(
                                 "`{}` only retrieves the length of strings.",
                                 BuiltinFunction::Len
-                            )))
+                            )));
                         }
                     };
 
@@ -380,10 +384,10 @@ impl<'a> Evaluator<'a> {
                 BuiltinFunction::Push => todo!(),
             },
 
-            _ => {
-                return Err(EvalError::FunctionNotFound(
-                    "Check if this identifier is a declared function".to_owned(),
-                ));
+            other => {
+                return Err(EvalError::FunctionNotFound(format!(
+                    "`{other}` cannot be called as a function"
+                )));
             }
         };
 
@@ -543,11 +547,10 @@ mod tests {
     fn eval_array_expression() {
         let input = r#"
             let add = fn(x, y) { return x + y; };
-            let foo = [1 + 1, add(2, 2)];
-            foo;
+            [1 + 1, add(2, 2)];
         "#;
         let mut evaluator = Evaluator::new(input);
-        let result = &evaluator.eval_program().unwrap()[2];
+        let result = &evaluator.eval_program().unwrap()[1];
         assert_eq!(
             result,
             &Object::ArrayValue(vec![Object::IntegerValue(2), Object::IntegerValue(4)])
@@ -558,11 +561,11 @@ mod tests {
     fn eval_index_expression() {
         let input = r#"
             let a = [100, 200, 300, 400];
-            a[1 + 1];
+            1 + a[1 + 1];
         "#;
         let mut evaluator = Evaluator::new(input);
         let result = &evaluator.eval_program().unwrap()[1];
-        assert_eq!(result, &Object::IntegerValue(300));
+        assert_eq!(result, &Object::IntegerValue(301));
     }
 
     #[test]
