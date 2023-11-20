@@ -370,9 +370,15 @@ impl<'a> Evaluator<'a> {
                             .len()
                             .try_into()
                             .or_else(|err| return Err(ParserError::IntConversionError(err)))?,
+
+                        Object::ArrayValue(objects) => objects
+                            .len()
+                            .try_into()
+                            .or_else(|err| return Err(ParserError::IntConversionError(err)))?,
+
                         _ => {
                             return Err(EvalError::UnsupportedArgumentType(format!(
-                                "`{}` only retrieves the length of strings.",
+                                "`{}` only retrieves the length of strings and arrays.",
                                 BuiltinFunction::Len
                             )));
                         }
