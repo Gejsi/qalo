@@ -4,8 +4,7 @@ use qalo::{evaluator::Evaluator, lexer::Lexer, object::Object, parser::Parser, t
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let a = if true { return; };
-        a;
+        false && false;
     "#;
 
     // let mut lexer = Lexer::new(input);

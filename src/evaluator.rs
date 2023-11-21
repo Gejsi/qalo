@@ -194,6 +194,8 @@ impl<'a> Evaluator<'a> {
             (Object::BooleanValue(lhs), Object::BooleanValue(rhs)) => match operator {
                 TokenKind::Equal => Object::BooleanValue(lhs == rhs),
                 TokenKind::NotEqual => Object::BooleanValue(lhs != rhs),
+                TokenKind::AndAnd => Object::BooleanValue(lhs && rhs),
+                TokenKind::OrOr => Object::BooleanValue(lhs || rhs),
                 _ => return Err(EvalError::UnsupportedOperator(operator)),
             },
 
@@ -559,6 +561,14 @@ mod tests {
             ("(1 < 2) == false", false),
             ("(1 > 2) == true", false),
             ("(1 > 2) == false", true),
+            ("true && true", true),
+            ("true && false", false),
+            ("false && true", false),
+            ("false && false", false),
+            ("true || true", true),
+            ("true || false", true),
+            ("false || true", true),
+            ("false || false", false),
         ];
 
         for (input, expected) in tests {

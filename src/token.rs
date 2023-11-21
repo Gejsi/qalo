@@ -25,13 +25,14 @@ pub enum TokenKind {
     Slash,
     Percentage,
 
-    // TODO: add && and ||
     Equal,
     NotEqual,
     LessThan,
     GreaterThan,
     LessThanEqual,
     GreaterThanEqual,
+    AndAnd,
+    OrOr,
 
     Comma,
     Semicolon,
@@ -93,6 +94,8 @@ impl fmt::Display for TokenKind {
             TokenKind::GreaterThan => write!(f, ">"),
             TokenKind::LessThanEqual => write!(f, "<="),
             TokenKind::GreaterThanEqual => write!(f, ">="),
+            TokenKind::AndAnd => write!(f, "&&"),
+            TokenKind::OrOr => write!(f, "||"),
 
             TokenKind::Comma => write!(f, ","),
             TokenKind::Semicolon => write!(f, ";"),

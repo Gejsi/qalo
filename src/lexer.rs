@@ -147,6 +147,34 @@ impl<'a> Lexer<'a> {
                     }
                 }
             }
+            '&' => {
+                if self.peek_char() == '&' {
+                    self.eat_char();
+                    Token {
+                        kind: TokenKind::AndAnd,
+                        literal: "&&".to_owned(),
+                    }
+                } else {
+                    Token {
+                        kind: TokenKind::Illegal,
+                        literal: self.ch.to_string(),
+                    }
+                }
+            }
+            '|' => {
+                if self.peek_char() == '|' {
+                    self.eat_char();
+                    Token {
+                        kind: TokenKind::OrOr,
+                        literal: "||".to_owned(),
+                    }
+                } else {
+                    Token {
+                        kind: TokenKind::Illegal,
+                        literal: self.ch.to_string(),
+                    }
+                }
+            }
             '+' => Token {
                 kind: TokenKind::Plus,
                 literal: "+".to_owned(),

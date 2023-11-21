@@ -156,17 +156,19 @@ impl<'a> Parser<'a> {
 
     fn infix_precedence(op: &TokenKind) -> Option<Precedence> {
         match op {
-            TokenKind::Equal | TokenKind::NotEqual => Some(Precedence::Infix(1, 2)),
+            TokenKind::AndAnd | TokenKind::OrOr => Some(Precedence::Infix(1, 2)),
+
+            TokenKind::Equal | TokenKind::NotEqual => Some(Precedence::Infix(3, 4)),
 
             TokenKind::LessThan
             | TokenKind::GreaterThan
             | TokenKind::LessThanEqual
-            | TokenKind::GreaterThanEqual => Some(Precedence::Infix(3, 4)),
+            | TokenKind::GreaterThanEqual => Some(Precedence::Infix(5, 6)),
 
-            TokenKind::Plus | TokenKind::Minus => Some(Precedence::Infix(5, 6)),
+            TokenKind::Plus | TokenKind::Minus => Some(Precedence::Infix(7, 8)),
 
             TokenKind::Asterisk | TokenKind::Slash | TokenKind::Percentage => {
-                Some(Precedence::Infix(6, 7))
+                Some(Precedence::Infix(9, 10))
             }
 
             _ => None,
@@ -175,14 +177,14 @@ impl<'a> Parser<'a> {
 
     fn prefix_precedence(op: &TokenKind) -> Option<Precedence> {
         match op {
-            TokenKind::Bang | TokenKind::Minus => Some(Precedence::Prefix(8)),
+            TokenKind::Bang | TokenKind::Minus => Some(Precedence::Prefix(11)),
             _ => None,
         }
     }
 
     fn postfix_precedence(op: &TokenKind) -> Option<Precedence> {
         match op {
-            TokenKind::LeftSquare | TokenKind::LeftParen => Some(Precedence::Postfix(9)),
+            TokenKind::LeftSquare | TokenKind::LeftParen => Some(Precedence::Postfix(12)),
             _ => None,
         }
     }
@@ -295,7 +297,9 @@ impl<'a> Parser<'a> {
                     | TokenKind::LessThan
                     | TokenKind::GreaterThan
                     | TokenKind::LessThanEqual
-                    | TokenKind::GreaterThanEqual => {
+                    | TokenKind::GreaterThanEqual
+                    | TokenKind::AndAnd
+                    | TokenKind::OrOr => {
                         let right = self.parse_expression(right_prec, false)?;
 
                         Expression::BinaryExpression {
@@ -540,6 +544,7 @@ mod tests {
             ),
             ("true", "true"),
             ("false", "false"),
+            ("true && 2 == 2", "(true && (2 == 2))"),
             ("3 > 5 == false", "((3 > 5) == false)"),
             ("3 < 5 == true", "((3 < 5) == true)"),
             ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
