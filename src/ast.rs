@@ -68,6 +68,7 @@ pub enum Expression {
 
     ArrayLiteral(Vec<Expression>),
 
+    // TODO: support different types of keys, as long as they are hashable.
     MapLiteral(HashMap<String, Expression>),
 
     BinaryExpression {
