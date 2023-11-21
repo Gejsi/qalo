@@ -1,4 +1,4 @@
-use std::{cell::RefCell, fmt, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc};
 
 use thiserror::Error;
 
@@ -14,6 +14,7 @@ pub enum Object {
     BooleanValue(bool),
     StringValue(String),
     ArrayValue(Vec<Object>),
+    MapValue(HashMap<String, Object>),
     ReturnValue(Box<Object>),
     FunctionValue(Closure),
     BuiltinValue(BuiltinFunction),
@@ -35,6 +36,16 @@ impl fmt::Display for Object {
                     write!(f, "{element}")?;
                 }
                 write!(f, "]")
+            }
+            Object::MapValue(map) => {
+                write!(f, "{{")?;
+                for (i, (key, value)) in map.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "\"{key}\": {value}")?;
+                }
+                write!(f, "}}")
             }
             Object::FunctionValue(value) => write!(f, "{value}"),
             Object::ReturnValue(value) => write!(f, "return {value}"),

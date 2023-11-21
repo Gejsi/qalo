@@ -1,4 +1,4 @@
-use std::{cell::RefCell, fmt::Debug, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
 
 use crate::{
     ast::{Expression, ParserError, Statement},
@@ -108,6 +108,7 @@ impl<'a> Evaluator<'a> {
             Expression::StringLiteral(lit) => Object::StringValue(lit),
             Expression::Identifier(name) => self.env.borrow().get(&name)?,
             Expression::ArrayLiteral(expressions) => self.eval_array_expression(expressions)?,
+            Expression::MapLiteral(map) => self.eval_map_expression(map)?,
             Expression::BinaryExpression {
                 left,
                 operator,
@@ -131,7 +132,6 @@ impl<'a> Evaluator<'a> {
             Expression::FunctionExpression { parameters, body } => {
                 self.eval_function_expression(parameters, *body)?
             }
-            _ => todo!(),
         };
 
         // unwrap return values
@@ -233,6 +233,19 @@ impl<'a> Evaluator<'a> {
         }
 
         Ok(Object::ArrayValue(objects))
+    }
+
+    fn eval_map_expression(
+        &mut self,
+        expr_map: HashMap<String, Expression>,
+    ) -> Result<Object, EvalError> {
+        let mut map: HashMap<String, Object> = HashMap::new();
+
+        for (key, expr) in expr_map {
+            map.insert(key, self.eval_expression(expr, false)?);
+        }
+
+        Ok(Object::MapValue(map))
     }
 
     fn eval_index_expression(

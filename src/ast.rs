@@ -124,8 +124,11 @@ impl fmt::Display for Expression {
             }
             Expression::MapLiteral(map) => {
                 write!(f, "{{")?;
-                for (key, value) in map.iter() {
-                    write!(f, "{key}: {value}, ")?;
+                for (i, (key, value)) in map.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "\"{key}\": {value}")?;
                 }
                 write!(f, "}}")
             }
