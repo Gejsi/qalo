@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::{
     ast::{Expression, ParserError, Program, Statement},
@@ -83,7 +83,7 @@ impl<'a> Parser<'a> {
         match self.cur.kind {
             TokenKind::Let => self.parse_var_statement(),
             TokenKind::Return => self.parse_return_statement(),
-            TokenKind::LeftBrace => self.parse_block_statement(),
+            // TokenKind::LeftBrace => self.parse_block_statement(),
             _ => self.parse_expression_statement(),
         }
     }
@@ -190,6 +190,8 @@ impl<'a> Parser<'a> {
             }
 
             TokenKind::LeftParen => self.parse_grouped_expression()?,
+
+            TokenKind::LeftBrace => self.parse_map_expression()?,
 
             // parse unary expressions based on prefix token precedences
             TokenKind::Bang | TokenKind::Minus => self.parse_unary_expression()?,
@@ -311,6 +313,31 @@ impl<'a> Parser<'a> {
         };
 
         Ok(Expression::GroupedExpression(Box::new(expr)))
+    }
+
+    pub fn parse_map_expression(&mut self) -> Result<Expression, ParserError> {
+        let mut map = HashMap::new();
+        let end = TokenKind::RightBrace;
+
+        while self.next.kind != end {
+            self.eat_token();
+            let key = self.cur.literal.clone();
+            self.expect_token(TokenKind::Colon)?;
+            let value = self.parse_expression(0, false)?;
+            map.insert(key, value);
+
+            if self.next.kind == TokenKind::Comma {
+                self.eat_token();
+            } else if self.next.kind != end {
+                return Err(ParserError::SyntaxError(
+                    "Expected comma between arguments".to_owned(),
+                ));
+            }
+        }
+
+        self.expect_token(end)?;
+
+        Ok(Expression::MapLiteral(map))
     }
 
     /// Parse comma separated list of expressions. Supports trailing commas before the final token.

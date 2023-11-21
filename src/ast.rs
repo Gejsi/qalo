@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fmt,
     num::{ParseIntError, TryFromIntError},
     rc::Rc,
@@ -67,6 +68,8 @@ pub enum Expression {
 
     ArrayLiteral(Vec<Expression>),
 
+    MapLiteral(HashMap<String, Expression>),
+
     BinaryExpression {
         left: Box<Expression>,
         operator: TokenKind,
@@ -118,6 +121,13 @@ impl fmt::Display for Expression {
                     write!(f, "{element}")?;
                 }
                 write!(f, "]")
+            }
+            Expression::MapLiteral(map) => {
+                write!(f, "{{")?;
+                for (key, value) in map.iter() {
+                    write!(f, "{key}: {value}, ")?;
+                }
+                write!(f, "}}")
             }
             Expression::BinaryExpression {
                 left,

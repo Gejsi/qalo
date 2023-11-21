@@ -4,23 +4,7 @@ use qalo::{evaluator::Evaluator, lexer::Lexer, object::Object, parser::Parser, t
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        let reduce = fn(arr, initial, f) {
-            let iter = fn(arr, result) {
-                if len(arr) == 0 {
-                    result
-                } else {
-                    iter(rest(arr), f(result, arr[0]));
-                }
-            };
-
-            iter(arr, initial);
-        };
-
-        let sum = fn(arr) {
-            return reduce(arr, 0, fn(initial, el) { initial + el });
-        };
-
-        sum([1, 2, 3, 4, 5]);
+        {"temp": 1+1, "foo": true, };
     "#;
 
     // let mut lexer = Lexer::new(input);
@@ -33,14 +17,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     //     }
     // }
 
-    // let mut parser = Parser::new(input);
-    // let program = parser.parse_program()?;
-    // println!("{program}");
+    let mut parser = Parser::new(input);
+    let program = parser.parse_program()?;
+    println!("{program:#?}");
 
-    let mut evaluator = Evaluator::new(input);
-    for obj in evaluator.eval_program()? {
-        println!("{obj:?}");
-    }
+    // let mut evaluator = Evaluator::new(input);
+    // for obj in evaluator.eval_program()? {
+    //     println!("{obj:?}");
+    // }
 
     Ok(())
 }

@@ -131,6 +131,7 @@ impl<'a> Evaluator<'a> {
             Expression::FunctionExpression { parameters, body } => {
                 self.eval_function_expression(parameters, *body)?
             }
+            _ => todo!(),
         };
 
         // unwrap return values
