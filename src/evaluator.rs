@@ -271,6 +271,15 @@ impl<'a> Evaluator<'a> {
                     return Err(EvalError::InvalidIndexType);
                 }
             }
+            Object::MapValue(map) => {
+                if let Object::StringValue(key) = index {
+                    let item = map.get(&key).ok_or(EvalError::ValueNotFound(key))?;
+
+                    Ok(item.clone())
+                } else {
+                    return Err(EvalError::InvalidIndexType);
+                }
+            }
             _ => return Err(EvalError::InvalidIndexUsage),
         }
     }
@@ -635,10 +644,17 @@ mod tests {
         let input = r#"
             let a = [100, 200, 300, 400];
             1 + a[1 + 1];
+
+            let b = { 
+                "foo": 2,
+                "bar": 4
+            };
+            b["foo"];
         "#;
         let mut evaluator = Evaluator::new(input);
-        let result = &evaluator.eval_program().unwrap()[1];
-        assert_eq!(result, &Object::IntegerValue(301));
+        let result = evaluator.eval_program().unwrap();
+        assert_eq!(&result[1], &Object::IntegerValue(301));
+        assert_eq!(&result[3], &Object::IntegerValue(2));
     }
 
     #[test]

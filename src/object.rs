@@ -138,6 +138,9 @@ pub enum EvalError {
     #[error("This structure has {0} elements but the index {1} is out of bounds.")]
     IndexOutOfBounds(usize, usize),
 
+    #[error("This map doesn't have a value defined at key {0}")]
+    ValueNotFound(String),
+
     #[error("Unknown evaluation error")]
     Unknown,
 }
