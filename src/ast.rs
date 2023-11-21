@@ -186,16 +186,13 @@ impl fmt::Display for Expression {
 #[derive(Error, Debug)]
 pub enum ParserError {
     #[error("Syntax error: {0}")]
-    SyntaxError(String), // Describes a syntax error with an error message
+    SyntaxError(String),
 
     #[error("Unexpected token: {0:#?}")]
-    UnexpectedToken(Rc<Token>), // Describes an unexpected token encountered during parsing
+    UnexpectedToken(Rc<Token>),
 
     #[error("Operator received an invalid operand type: {0:#?}")]
-    InvalidOperandType(Rc<Token>), // Describes an error when an operator receives an invalid operand type
-
-    #[error("Semantic error: {0}")]
-    SemanticError(String),
+    InvalidOperandType(Rc<Token>),
 
     #[error("Failed to parse to a 32 bit integer: {0}")]
     ParseIntError(#[from] ParseIntError),

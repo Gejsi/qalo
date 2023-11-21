@@ -320,8 +320,15 @@ impl<'a> Parser<'a> {
         let end = TokenKind::RightBrace;
 
         while self.next.kind != end {
-            self.eat_token();
-            let key = self.cur.literal.clone();
+            let key = match self.parse_expression(0, false)? {
+                Expression::StringLiteral(lit) => lit,
+                _ => {
+                    return Err(ParserError::SyntaxError(
+                        "Only strings can be used as keys.".to_owned(),
+                    ))
+                }
+            };
+
             self.expect_token(TokenKind::Colon)?;
             let value = self.parse_expression(0, false)?;
             map.insert(key, value);
