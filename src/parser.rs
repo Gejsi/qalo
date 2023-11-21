@@ -83,7 +83,10 @@ impl<'a> Parser<'a> {
         match self.cur.kind {
             TokenKind::Let => self.parse_var_statement(),
             TokenKind::Return => self.parse_return_statement(),
-            // TokenKind::LeftBrace => self.parse_block_statement(),
+            TokenKind::LeftBrace => {
+                println!("dude");
+                self.parse_block_statement()
+            }
             _ => self.parse_expression_statement(),
         }
     }

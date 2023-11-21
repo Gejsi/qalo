@@ -617,6 +617,20 @@ mod tests {
     }
 
     #[test]
+    fn eval_map_expression() {
+        let input = r#"
+            let foo = { "temp": 1 + 1, "foo": 4 };
+            foo;
+        "#;
+        let mut evaluator = Evaluator::new(input);
+        let result = &evaluator.eval_program().unwrap()[1];
+        let mut expected = HashMap::new();
+        expected.insert("temp".to_owned(), Object::IntegerValue(2));
+        expected.insert("foo".to_owned(), Object::IntegerValue(4));
+        assert_eq!(result, &Object::MapValue(expected));
+    }
+
+    #[test]
     fn eval_index_expression() {
         let input = r#"
             let a = [100, 200, 300, 400];
