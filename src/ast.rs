@@ -30,8 +30,7 @@ pub enum Statement {
         value: Expression,
     },
 
-    // TODO: make the expression optional
-    ReturnStatement(Expression),
+    ReturnStatement(Option<Expression>),
 
     AssignStatement {
         name: String,
@@ -49,7 +48,13 @@ impl fmt::Display for Statement {
             Statement::VarStatement { kind, name, value } => {
                 write!(f, "{} {} = {};", kind, name, value)
             }
-            Statement::ReturnStatement(expr) => write!(f, "return {expr};"),
+            Statement::ReturnStatement(expr) => {
+                if let Some(expr) = expr {
+                    write!(f, "return {expr};")
+                } else {
+                    write!(f, "return;")
+                }
+            }
             Statement::AssignStatement { name, value } => write!(f, "{name} = {value};"),
             Statement::ExpressionStatement(expr) => write!(f, "{expr}"),
             Statement::BlockStatement(statements) => {

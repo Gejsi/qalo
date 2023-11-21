@@ -110,9 +110,14 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_return_statement(&mut self) -> Result<Statement, ParserError> {
-        let expr = self.parse_expression(0, false)?;
-        self.expect_token(TokenKind::Semicolon)?;
-        Ok(Statement::ReturnStatement(expr))
+        if self.next.kind == TokenKind::Semicolon {
+            self.eat_token();
+            Ok(Statement::ReturnStatement(None))
+        } else {
+            let expr = self.parse_expression(0, false)?;
+            self.expect_token(TokenKind::Semicolon)?;
+            Ok(Statement::ReturnStatement(Some(expr)))
+        }
     }
 
     pub fn parse_assign_statement(&mut self) -> Result<Statement, ParserError> {

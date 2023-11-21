@@ -71,7 +71,11 @@ impl<'a> Evaluator<'a> {
                 for statement in statements {
                     // handle return statements inside a block
                     if let Statement::ReturnStatement(expr) = statement {
-                        let expr_eval = self.eval_expression(expr, true)?;
+                        let expr_eval = if let Some(expr) = expr {
+                            self.eval_expression(expr, true)?
+                        } else {
+                            Object::UnitValue
+                        };
 
                         // if the result of the evaluation is a *return value*, keep it to
                         // propagate it to upper blocks...
