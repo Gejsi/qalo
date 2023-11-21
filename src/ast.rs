@@ -30,7 +30,13 @@ pub enum Statement {
         value: Expression,
     },
 
+    // TODO: make the expression optional
     ReturnStatement(Expression),
+
+    AssignStatement {
+        name: String,
+        value: Expression,
+    },
 
     ExpressionStatement(Expression),
 
@@ -43,8 +49,9 @@ impl fmt::Display for Statement {
             Statement::VarStatement { kind, name, value } => {
                 write!(f, "{} {} = {};", kind, name, value)
             }
-            Statement::ReturnStatement(expr) => write!(f, "return {};", expr),
-            Statement::ExpressionStatement(expr) => write!(f, "{}", expr),
+            Statement::ReturnStatement(expr) => write!(f, "return {expr};"),
+            Statement::AssignStatement { name, value } => write!(f, "{name} = {value};"),
+            Statement::ExpressionStatement(expr) => write!(f, "{expr}"),
             Statement::BlockStatement(statements) => {
                 write!(f, "{{")?;
                 for statement in statements {

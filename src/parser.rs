@@ -83,9 +83,13 @@ impl<'a> Parser<'a> {
         match self.cur.kind {
             TokenKind::Let => self.parse_var_statement(),
             TokenKind::Return => self.parse_return_statement(),
-            TokenKind::LeftBrace => {
-                println!("dude");
-                self.parse_block_statement()
+            TokenKind::LeftBrace => self.parse_block_statement(),
+            TokenKind::Identifier => {
+                if self.next.kind == TokenKind::Assign {
+                    self.parse_assign_statement()
+                } else {
+                    self.parse_expression_statement()
+                }
             }
             _ => self.parse_expression_statement(),
         }
@@ -109,6 +113,15 @@ impl<'a> Parser<'a> {
         let expr = self.parse_expression(0, false)?;
         self.expect_token(TokenKind::Semicolon)?;
         Ok(Statement::ReturnStatement(expr))
+    }
+
+    pub fn parse_assign_statement(&mut self) -> Result<Statement, ParserError> {
+        let name = self.cur.literal.clone();
+        self.expect_token(TokenKind::Assign)?;
+        let expr = self.parse_expression(0, false)?;
+        self.expect_token(TokenKind::Semicolon)?;
+
+        Ok(Statement::AssignStatement { name, value: expr })
     }
 
     pub fn parse_block_statement(&mut self) -> Result<Statement, ParserError> {
@@ -468,6 +481,15 @@ mod tests {
 
         let mut parser = Parser::new(input);
         parser.parse_expression_statement().unwrap();
+    }
+
+    #[test]
+    fn parse_assign_statement() {
+        let input = r#"
+            a = a + 1;
+        "#;
+        let mut parser = Parser::new(input);
+        parser.parse_assign_statement().unwrap();
     }
 
     #[test]

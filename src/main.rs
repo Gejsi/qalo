@@ -4,7 +4,7 @@ use qalo::{evaluator::Evaluator, lexer::Lexer, object::Object, parser::Parser, t
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = r#"
-        print("Hello", " ", "world", 3);
+        let a = 1;
     "#;
 
     // let mut lexer = Lexer::new(input);

@@ -55,6 +55,11 @@ impl<'a> Evaluator<'a> {
                 // return statements aren't allowed at the top-level scope
                 return Err(EvalError::ReturnOutsideExpression);
             }
+            Statement::AssignStatement { name, value } => {
+                let obj = self.eval_expression(value, true)?;
+                self.env.borrow_mut().set(name, obj);
+                Ok(Object::UnitValue)
+            }
             Statement::ExpressionStatement(expr) => Ok(self.eval_expression(expr, true)?),
             Statement::BlockStatement(statements) => {
                 let inner_env = self.create_enclosed_env();
@@ -68,7 +73,8 @@ impl<'a> Evaluator<'a> {
                     if let Statement::ReturnStatement(expr) = statement {
                         let expr_eval = self.eval_expression(expr, true)?;
 
-                        // if the result of the evaluation is a *return value*, unwrap it first...
+                        // if the result of the evaluation is a *return value*, keep it to
+                        // propagate it to upper blocks...
                         if matches!(expr_eval, Object::ReturnValue(_)) {
                             obj = expr_eval;
                         } else {
@@ -718,6 +724,18 @@ mod tests {
         let mut evaluator = Evaluator::new(input);
         let result = &evaluator.eval_program().unwrap()[2];
         assert_eq!(result, &Object::IntegerValue(2));
+    }
+
+    #[test]
+    fn eval_assign_statement() {
+        let input = r#"
+            let a = 2;
+            a = a + 2;
+            a;
+        "#;
+        let mut evaluator = Evaluator::new(input);
+        let result = &evaluator.eval_program().unwrap()[2];
+        assert_eq!(result, &Object::IntegerValue(4));
     }
 
     #[test]

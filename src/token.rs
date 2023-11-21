@@ -25,6 +25,7 @@ pub enum TokenKind {
     Slash,
     Percentage,
 
+    // TODO: add && and ||
     Equal,
     NotEqual,
     LessThan,
