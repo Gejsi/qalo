@@ -74,6 +74,7 @@ pub enum BuiltinFunction {
     Append,
     Rest,
     Println,
+    Print,
 }
 
 impl BuiltinFunction {
@@ -84,6 +85,7 @@ impl BuiltinFunction {
             "append" => Ok(Object::BuiltinValue(BuiltinFunction::Append)),
             "rest" => Ok(Object::BuiltinValue(BuiltinFunction::Rest)),
             "println" => Ok(Object::BuiltinValue(BuiltinFunction::Println)),
+            "print" => Ok(Object::BuiltinValue(BuiltinFunction::Print)),
             _ => Err(EvalError::IdentifierNotFound(identifier.to_owned())),
         }
     }
@@ -96,6 +98,7 @@ impl fmt::Display for BuiltinFunction {
             BuiltinFunction::Append => write!(f, "push"),
             BuiltinFunction::Rest => write!(f, "rest"),
             BuiltinFunction::Println => write!(f, "println"),
+            BuiltinFunction::Print => write!(f, "print"),
         }
     }
 }

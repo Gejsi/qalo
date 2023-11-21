@@ -446,6 +446,11 @@ impl<'a> Evaluator<'a> {
                     arguments.iter().for_each(|arg| println!("{arg}"));
                     Object::UnitValue
                 }
+                BuiltinFunction::Print => {
+                    let arguments = self.eval_call_expression_arguments(arguments)?;
+                    arguments.iter().for_each(|arg| print!("{arg}"));
+                    Object::UnitValue
+                }
             },
 
             other => {
