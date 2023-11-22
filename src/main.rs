@@ -1,29 +1,22 @@
-use std::error::Error;
+use std::{env, error::Error, fs, process};
 
-use qalo::{evaluator::Evaluator, lexer::Lexer, object::Object, parser::Parser, token::TokenKind};
+use qalo::evaluator::Evaluator;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let input = r#"
-        false && false;
-    "#;
+    let args = env::args().collect::<Vec<String>>();
+    let files = args
+        .into_iter()
+        .filter(|file| file.ends_with(".ql"))
+        .collect::<Vec<String>>();
 
-    // let mut lexer = Lexer::new(input);
-    // loop {
-    //     let token = lexer.next_token();
-    //     println!("{token:?}");
+    for file in files {
+        let source = fs::read_to_string(file).expect("Failed to read a file");
 
-    //     if token.kind == TokenKind::Eof {
-    //         break;
-    //     }
-    // }
-
-    // let mut parser = Parser::new(input);
-    // let program = parser.parse_program()?;
-    // println!("{program:#?}");
-
-    let mut evaluator = Evaluator::new(input);
-    for obj in evaluator.eval_program()? {
-        println!("{obj}");
+        let mut evaluator = Evaluator::new(&source);
+        evaluator.eval_program().unwrap_or_else(|err| {
+            eprintln!("| Qalo Error |\n{err}");
+            process::exit(1);
+        });
     }
 
     Ok(())
