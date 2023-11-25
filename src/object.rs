@@ -146,7 +146,4 @@ pub enum EvalError {
 
     #[error("This map doesn't have a value defined at key {0}")]
     ValueNotFound(String),
-
-    #[error("Unknown evaluation error")]
-    Unknown,
 }

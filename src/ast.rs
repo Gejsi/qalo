@@ -213,9 +213,6 @@ pub enum ParserError {
     #[error("Failed to parse to a 32 bit integer: {0}")]
     ParseIntError(#[from] ParseIntError),
 
-    #[error("Integral type conversion failed: {0}")]
+    #[error("Conversion to int failed: {0}")]
     IntConversionError(#[from] TryFromIntError),
-
-    #[error("Unknown parsing error")]
-    Unknown,
 }

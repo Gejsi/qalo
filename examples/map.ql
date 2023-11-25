@@ -3,7 +3,7 @@ let map = fn(arr, f) {
     if len(arr) == 0 {
       accumulated
     } else {
-        iter(rest(arr), append(accumulated, f(arr[0])));
+      iter(rest(arr), append(accumulated, f(arr[0])));
     }
   };
 
