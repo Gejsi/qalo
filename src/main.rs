@@ -3,8 +3,7 @@ use std::{env, error::Error, fs, process};
 use qalo::evaluator::Evaluator;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let args = env::args().collect::<Vec<String>>();
-    let files = args
+    let files = env::args()
         .into_iter()
         .filter(|file| file.ends_with(".ql"))
         .collect::<Vec<String>>();
